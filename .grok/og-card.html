@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #09090b;
+      --card: #111114;
+      --surface-2: #18181c;
+      --morning: #5b8def;
+      --morning-dim: rgba(91, 141, 239, 0.22);
+      --night: #3dcf8e;
+      --night-dim: rgba(61, 207, 142, 0.18);
+      --holiday: #ef6b6b;
+      --holiday-dim: rgba(239, 107, 107, 0.22);
+      --off: #e4e4e7;
+      --weekend: #1c1c20;
+      --text: #f4f4f5;
+      --muted: #a1a1aa;
+      --subtle: #71717a;
+      --border: rgba(255, 255, 255, 0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 1200px;
+      height: 630px;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .stage {
+      position: relative;
+      width: 1200px;
+      height: 630px;
+      background:
+        radial-gradient(ellipse 70% 80% at 12% 0%, rgba(91, 141, 239, 0.16), transparent 55%),
+        radial-gradient(ellipse 60% 70% at 92% 100%, rgba(61, 207, 142, 0.13), transparent 50%),
+        var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 52px 72px 44px;
+    }
+    .lockup {
+      text-align: center;
+      flex: 0 0 auto;
+      margin-bottom: 28px;
+    }
+    h1 {
+      font-size: 72px;
+      font-weight: 800;
+      letter-spacing: -0.045em;
+      line-height: 1;
+      color: var(--text);
+    }
+    .tag {
+      margin-top: 10px;
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .cal {
+      width: 100%;
+      max-width: 920px;
+      flex: 1 1 auto;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 18px 20px 16px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 24px 80px rgba(0,0,0,0.45);
+    }
+    .month {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--subtle);
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-template-rows: 22px repeat(5, 1fr);
+      gap: 6px;
+    }
+    .wd {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-align: center;
+      color: var(--muted);
+      line-height: 22px;
+    }
+    .wd.wknd { color: var(--subtle); }
+    .cell {
+      border-radius: 10px;
+      padding: 7px 8px 6px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 0;
+    }
+    .cell.empty { background: transparent; }
+    .num {
+      font-size: 13px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .kind {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      line-height: 1;
+      opacity: 0.95;
+    }
+    .morning { background: var(--morning-dim); color: var(--morning); }
+    .night { background: var(--night-dim); color: var(--night); }
+    .off { background: transparent; color: var(--muted); }
+    .off.wknd { background: var(--weekend); color: var(--subtle); }
+    .holiday { background: var(--holiday-dim); color: var(--holiday); }
+    .today { box-shadow: 0 0 0 1.5px rgba(244, 244, 245, 0.55); }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="lockup">
+      <h1>Zmeny</h1>
+      <div class="tag">Kalendár zmien</div>
+    </div>
+    <div class="cal">
+      <div class="month">september 2026</div>
+      <div class="grid">
+        <div class="wd">Po</div>
+        <div class="wd">Ut</div>
+        <div class="wd">St</div>
+        <div class="wd">Št</div>
+        <div class="wd">Pi</div>
+        <div class="wd wknd">So</div>
+        <div class="wd wknd">Ne</div>
+
+        <div class="cell empty"></div>
+        <div class="cell holiday"><span class="num">1</span><span class="kind">sviatok</span></div>
+        <div class="cell morning today"><span class="num">2</span><span class="kind">ranná</span></div>
+        <div class="cell night"><span class="num">3</span><span class="kind">nočná</span></div>
+        <div class="cell night"><span class="num">4</span><span class="kind">nočná</span></div>
+        <div class="cell off wknd"><span class="num">5</span></div>
+        <div class="cell off wknd"><span class="num">6</span></div>
+
+        <div class="cell off"><span class="num">7</span></div>
+        <div class="cell off"><span class="num">8</span></div>
+        <div class="cell morning"><span class="num">9</span><span class="kind">ranná</span></div>
+        <div class="cell morning"><span class="num">10</span><span class="kind">ranná</span></div>
+        <div class="cell night"><span class="num">11</span><span class="kind">nočná</span></div>
+        <div class="cell night wknd"><span class="num">12</span><span class="kind">nočná</span></div>
+        <div class="cell off wknd"><span class="num">13</span></div>
+
+        <div class="cell off"><span class="num">14</span></div>
+        <div class="cell holiday"><span class="num">15</span><span class="kind">sviatok</span></div>
+        <div class="cell morning"><span class="num">16</span><span class="kind">ranná</span></div>
+        <div class="cell morning"><span class="num">17</span><span class="kind">ranná</span></div>
+        <div class="cell night"><span class="num">18</span><span class="kind">nočná</span></div>
+        <div class="cell night wknd"><span class="num">19</span><span class="kind">nočná</span></div>
+        <div class="cell off wknd"><span class="num">20</span></div>
+
+        <div class="cell off"><span class="num">21</span></div>
+        <div class="cell off"><span class="num">22</span></div>
+        <div class="cell morning"><span class="num">23</span><span class="kind">ranná</span></div>
+        <div class="cell morning"><span class="num">24</span><span class="kind">ranná</span></div>
+        <div class="cell night"><span class="num">25</span><span class="kind">nočná</span></div>
+        <div class="cell night wknd"><span class="num">26</span><span class="kind">nočná</span></div>
+        <div class="cell off wknd"><span class="num">27</span></div>
+
+        <div class="cell off"><span class="num">28</span></div>
+        <div class="cell off"><span class="num">29</span></div>
+        <div class="cell morning"><span class="num">30</span><span class="kind">ranná</span></div>
+        <div class="cell empty"></div>
+        <div class="cell empty"></div>
+        <div class="cell empty"></div>
+        <div class="cell empty"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

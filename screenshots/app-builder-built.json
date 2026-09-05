@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Zmeny",
+      "hasCanvas": false,
+      "bodyTextLen": 443,
+      "bodyTextHash": "bdc710bbbdcc47da56833ed9b9bbfc049520d1411e36edb0807fee65f75da7ce",
+      "bodyTextPrefix": "KALENDÁR ZMIEN Zmeny Ako máš zmeny? Vyber začiatok prvej rannej ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Zmeny",
+      "hasCanvas": false,
+      "bodyTextLen": 443,
+      "bodyTextHash": "bdc710bbbdcc47da56833ed9b9bbfc049520d1411e36edb0807fee65f75da7ce",
+      "bodyTextPrefix": "KALENDÁR ZMIEN Zmeny Ako máš zmeny? Vyber začiatok prvej rannej ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}
