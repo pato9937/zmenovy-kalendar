@@ -53,6 +53,7 @@ export interface PayrollConfig {
   halfYearMonths: number[];   // Mesiace s polročnou prémiou (máj, november)
   food: number;               // Zrážka za stravu: 7,50 € (pozor: kolíše aj toto — videné aj 4 € a 10 €, over si to na páske)
   dds: number;                // DDS zamestnanec — zrážka: 15,00 €
+  ddsEmployerTaxable: number; // Príspevok zamestnávateľa na DDS (15 €) sa pripočítava k základu dane ako nepeňažný zdaniteľný príjem — potvrdené na 2 rôznych mesiacoch (rozdiel presne +15 € v Zákl.daň.mesač)
   nczd: number;               // Odpočet na daňovníka (mesačne): 497,23 € — aktuálna suma pre 2026 (v roku 2025 to bolo menej, napr. 479,48 €)
   healthRate: number;         // Zdravotné poistenie zamestnanca: 5 % — POZOR: do 12/2025 to bolo 4 %, od 1/2026 je to 5 % (celoštátna zmena)
   sicknessRate: number;       // Nemocenské poistenie: 1,4 %
@@ -83,6 +84,7 @@ export const DEFAULT_PAYROLL: PayrollConfig = {
   halfYearMonths: [5, 11],
   food: 7.5,
   dds: 15.0,
+  ddsEmployerTaxable: 15.0,
   nczd: 497.23,
   healthRate: 5,
   sicknessRate: 1.4,
@@ -96,6 +98,7 @@ export interface MonthExtras {
   extraGross: number;
   fundHoursOverride?: number; // Ak zadané, použije sa NAMIESTO vypočítaného fondu — zadaj priamo číslo "Úväzok" z pásky (kolíše mesiac čo mesiac, napr. 176h alebo 132h, nedá sa spoľahlivo predpočítať)
   balanceAdjustmentHours?: number; // Prenesené saldo nadčasov z predošlého mesiaca (napr. "Saldo nadčasov" z poslednej pásky) — appka si ho naprieč mesiacmi nepamätá sama, zadaj ho ručne každý mesiac nanovo. Vypláca sa max. 32h/mesiac.
+  annualTaxSettlement?: number; // Jednorazová položka "Ročné zúčt.dane" z pásky (raz ročne) — zadaj ako KLADNÉ číslo (refundácia), pripočíta sa priamo k čistej mzde
 }
 
 export const EMPTY_EXTRAS: MonthExtras = { vacationHours: 0, extraGross: 0 };
@@ -245,6 +248,7 @@ export interface PayrollBreakdown {
   tax: number;
   food: number;
   dds: number;
+  annualTaxSettlement: number;
   net: number;
 }
 
@@ -432,13 +436,14 @@ export function computeMonthPayroll(opts: {
   const pension = roundCents(gross * (cfg.pensionRate / 100));
   const unemployment = roundCents(gross * (cfg.unemploymentRate / 100));
   const insurance = roundCents(health + sickness + disability + pension + unemployment);
-  const preNczd = roundCents(gross - insurance);
+  const preNczd = roundCents(gross - insurance + cfg.ddsEmployerTaxable);
   const nczd = monthlyNczd(cfg);
   const taxBase = Math.max(0, roundCents(preNczd - nczd));
   const tax = progressiveTax(taxBase);
   const food = cfg.food;
   const dds = cfg.dds;
-  const net = roundCents(gross - insurance - tax - food - dds);
+  const annualTaxSettlement = extras.annualTaxSettlement ?? 0; // jednorazová položka "Ročné zúčt.dane" — kladné číslo z pásky (aj keď je tam so znamienkom mínus, je to REFUNDÁCIA, teda plus pre teba)
+  const net = roundCents(gross - insurance - tax - food - dds + annualTaxSettlement);
 
   return {
     workHours: roundCents(workHours),
@@ -475,6 +480,7 @@ export function computeMonthPayroll(opts: {
     tax,
     food: roundCents(food),
     dds: roundCents(dds),
+    annualTaxSettlement: roundCents(annualTaxSettlement),
     net,
   };
 }

@@ -80,13 +80,20 @@ export function WageCard({
           value={extras.balanceAdjustmentHours ?? 0}
           onCommit={(v) => setMonthExtras(key, { balanceAdjustmentHours: v !== 0 ? v : undefined })}
         />
+        <NumberField
+          label="Ročné zúčt. dane (€)"
+          value={extras.annualTaxSettlement ?? 0}
+          onCommit={(v) => setMonthExtras(key, { annualTaxSettlement: v !== 0 ? v : undefined })}
+        />
       </div>
       <p className="mt-1 text-2xs text-subtle">
         Fond kolíše mesiac čo mesiac a nedá sa spoľahlivo predpočítať — odpíš číslo "Úväzok" z pásky
         (0 = automatický odhad z kalendára). "Dovolenka navyše" sa pripočíta k dňom označeným v
         kalendári ako Dovolenka — ak už máš dni vyplnené priamo v kalendári, tu nechaj 0.
         "Prenesené saldo" je z poslednej pásky ("Saldo nadčasov") — kladné aj záporné číslo, appka
-        ho naprieč mesiacmi nesleduje sama. Vypláca sa max. 32 h nadčasu za mesiac.
+        ho naprieč mesiacmi nesleduje sama. Vypláca sa max. 32 h nadčasu za mesiac. "Ročné zúčt.
+        dane" je jednorazová položka z pásky (zvyčajne raz ročne) — zadaj ako kladné číslo
+        (refundácia), aj keď je na páske so znamienkom mínus.
       </p>
       {p.perDiemTotal ? (
         <p className="mt-1 text-2xs text-subtle">
@@ -133,6 +140,7 @@ export function WageCard({
               ["Daň", `základ ${formatEur(p.taxBase)}`, -p.tax],
               ["Strava", null, -p.food],
               ["DDS", null, -p.dds],
+              p.annualTaxSettlement ? ["Ročné zúčt. dane", "jednorazovo", p.annualTaxSettlement] : null,
             ]}
             total={p.net}
             totalLabel="Čistá na účet"
