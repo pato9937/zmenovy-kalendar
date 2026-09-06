@@ -205,7 +205,9 @@ export function computeStats(opts: {
     const hours =
       kind === "off"
         ? 0
-        : netWorkHours(kind, shift?.start ?? "", shift?.end ?? "", BREAK_12H);
+        : kind === "vacation" || kind === "trip"
+          ? shift?.hours ?? 0
+          : netWorkHours(kind, shift?.start ?? "", shift?.end ?? "", BREAK_12H);
     stats.workedHours += hours;
     if (kind !== "off") stats.workDays += 1;
     if (kind === "morning") stats.morningCount += 1;
