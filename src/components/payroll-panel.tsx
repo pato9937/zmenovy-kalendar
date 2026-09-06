@@ -2,13 +2,15 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import { MonthsField, NumberField } from "@/components/ui/number-field";
-import { DEFAULT_PAYROLL, type PayrollConfig } from "@/lib/payroll";
+import { DEFAULT_PAYROLL, WEEKEND_RATE_BY_CLASS, type PayrollConfig, type TariffClass } from "@/lib/payroll";
 import { useShiftStore } from "@/lib/store";
 
 interface PayrollPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const TARIFF_CLASSES: TariffClass[] = ["1-3", "4-5", "6-7", "8-12"];
 
 export function PayrollPanel({ open, onOpenChange }: PayrollPanelProps) {
   const payroll = useShiftStore((s) => s.payroll);
@@ -23,24 +25,35 @@ export function PayrollPanel({ open, onOpenChange }: PayrollPanelProps) {
     >
       <div className="space-y-6 pb-4">
         <Section title="Základ">
-          <NumberField
-            label="Hodinová sadzba €/h"
-            value={payroll.hourlyRate}
-            onCommit={(v) => setPayroll({ hourlyRate: v })}
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <NumberField
+              label="Tarifný plat €/mesiac"
+              value={payroll.tariffMonthly}
+              onCommit={(v) => setPayroll({ tariffMonthly: v })}
+            />
+            <NumberField
+              label="PPÚ (priemer) €/h"
+              value={payroll.ppuRate}
+              onCommit={(v) => setPayroll({ ppuRate: v })}
+            />
+          </div>
+          <p className="text-2xs text-subtle">
+            Tarifný plat sa delí fondom hodín daného mesiaca — sadzba za hodinu tak nie je
+            fixná, mení sa mesiac čo mesiac. PPÚ (priemerný zárobok) sa používa na dovolenku,
+            sviatok a príplatok za nadčas — aktualizuj ho, keď ti ho firma prepočíta (kvartálne).
+          </p>
         </Section>
 
         <Section title="Príplatky">
           <div className="grid grid-cols-2 gap-2">
             <NumberField label="Poobedný €/h" value={payroll.afternoonRate} onCommit={(v) => setPayroll({ afternoonRate: v })} />
             <NumberField label="Nočný €/h" value={payroll.nightRate} onCommit={(v) => setPayroll({ nightRate: v })} />
-            <NumberField label="So / Ne €/h" value={payroll.weekendRate} onCommit={(v) => setPayroll({ weekendRate: v })} />
             <NumberField label="Sviatok %" value={payroll.holidayPercent} onCommit={(v) => setPayroll({ holidayPercent: v })} />
             <NumberField label="Nadčas %" value={payroll.overtimePercent} onCommit={(v) => setPayroll({ overtimePercent: v })} />
           </div>
           <p className="text-2xs text-subtle">
             Poobedný {payroll.afternoonFrom}–{payroll.afternoonTo}, nočný {payroll.nightFrom}–{payroll.nightTo}.
-            Nadčas = hodiny nad fondom, 25 % z hodinovky navyše.
+            Nadčas = hodiny nad fondom, {payroll.overtimePercent} % z PPÚ navyše.
           </p>
           <div className="grid grid-cols-2 gap-2">
             <TimeField label="Poobedný od" value={payroll.afternoonFrom} onChange={(v) => setPayroll({ afternoonFrom: v })} />
@@ -48,6 +61,44 @@ export function PayrollPanel({ open, onOpenChange }: PayrollPanelProps) {
             <TimeField label="Nočný od" value={payroll.nightFrom} onChange={(v) => setPayroll({ nightFrom: v })} />
             <TimeField label="Nočný do" value={payroll.nightTo} onChange={(v) => setPayroll({ nightTo: v })} />
           </div>
+        </Section>
+
+        <Section title="Príplatok So / Ne — podľa tarifnej triedy">
+          <div className="grid grid-cols-4 gap-2">
+            {TARIFF_CLASSES.map((tc) => (
+              <button
+                key={tc}
+                type="button"
+                onClick={() => setPayroll({ tariffClass: tc })}
+                className={`rounded-xl px-2 py-2 text-center text-xs font-medium transition-colors ${
+                  payroll.tariffClass === tc
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-surface-2 text-foreground hover:bg-surface-3"
+                }`}
+              >
+                <span className="block">{tc}</span>
+                <span className="block tabular-nums text-2xs opacity-80">
+                  {WEEKEND_RATE_BY_CLASS[tc].toString().replace(".", ",")} €/h
+                </span>
+              </button>
+            ))}
+          </div>
+          <p className="text-2xs text-subtle">
+            Sadzba za odpracované hodiny cez sobotu/nedeľu závisí od tvojej tarifnej triedy —
+            vyber tú, v ktorej si zaradený.
+          </p>
+        </Section>
+
+        <Section title="Výkonnostný bonus">
+          <NumberField
+            label="Výkon. bonus % (0–10)"
+            value={payroll.vykonBonusPercent}
+            onCommit={(v) => setPayroll({ vykonBonusPercent: Math.max(0, Math.min(10, v)) })}
+          />
+          <p className="text-2xs text-subtle">
+            Diskrétny bonus 0–10 % zo (základná mzda + zákl. za nadčas) — dá ho nadriadený,
+            nedá sa vypočítať vopred. Zadaj ho ručne za mesiac, keď ho poznáš.
+          </p>
         </Section>
 
         <Section title="Pravidelné príplatky">
@@ -66,12 +117,13 @@ export function PayrollPanel({ open, onOpenChange }: PayrollPanelProps) {
             onCommit={(v) => setPayroll({ attendanceMonths: v })}
           />
           <MonthsField
-            label="Mesiace polročnej (½ základu)"
+            label="Mesiace polročnej (½ tarifného platu)"
             value={payroll.halfYearMonths}
             onCommit={(v) => setPayroll({ halfYearMonths: v })}
           />
           <p className="text-2xs text-subtle">
-            Polročná sa dopočíta sama ako polovica základnej mzdy (hodiny × sadzba) v mesiacoch, ktoré zadáš. Mesiace píš s čiarkou, napr. 6, 12.
+            Polročná sa dopočíta sama ako polovica tarifného platu v mesiacoch, ktoré zadáš.
+            Mesiace píš s čiarkou, napr. 5, 11.
           </p>
         </Section>
 
@@ -82,17 +134,17 @@ export function PayrollPanel({ open, onOpenChange }: PayrollPanelProps) {
           </div>
         </Section>
 
-        <Section title="Odvody 2026">
+        <Section title="Odvody a daň">
           <div className="grid grid-cols-2 gap-2">
             <NumberField label="Zdravotné %" value={payroll.healthRate} onCommit={(v) => setPayroll({ healthRate: v })} />
             <NumberField label="Nemocenské %" value={payroll.sicknessRate} onCommit={(v) => setPayroll({ sicknessRate: v })} />
             <NumberField label="Invalidné %" value={payroll.disabilityRate} onCommit={(v) => setPayroll({ disabilityRate: v })} />
             <NumberField label="Starobné %" value={payroll.pensionRate} onCommit={(v) => setPayroll({ pensionRate: v })} />
             <NumberField label="Nezamestnanosť %" value={payroll.unemploymentRate} onCommit={(v) => setPayroll({ unemploymentRate: v })} />
-            <NumberField label="NČZD €" value={payroll.nczd} onCommit={(v) => setPayroll({ nczd: v })} />
+            <NumberField label="Odpočet na daňovníka €" value={payroll.nczd} onCommit={(v) => setPayroll({ nczd: v })} />
           </div>
           <p className="text-2xs text-subtle">
-            Zamestnanec 2026: ZP 5 % + SP 9,4 %. Daň 19 % z (hrubá − odvody − NČZD).
+            Daň: 19 % zo základu (hrubá − odvody − odpočet na daňovníka).
           </p>
         </Section>
 
