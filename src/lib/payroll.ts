@@ -1,6 +1,6 @@
 import { addDays, eachDayOfInterval, endOfMonth, isWeekend, startOfMonth } from "date-fns";
 import { fromISODate, toISODate, toMinutes } from "./dates";
-import { isDayOfRest, isPublicHoliday } from "./holidays";
+import { isPublicHoliday } from "./holidays";
 import { BREAK_12H, netWorkHours, type DayShift } from "./shifts";
 
 // src/lib/payroll.ts
@@ -315,7 +315,13 @@ export function computeMonthPayroll(opts: {
       weekendHours += prem.weekend;
       holidayHours += prem.holiday;
     }
-    if (!isWeekend(date) && !isDayOfRest(iso)) {
+    if (!isWeekend(date)) {
+      // Fond sa počíta zo VŠETKÝCH pracovných dní (Po–Pi), sviatky sa
+      // NEODPOČÍTAVAJÚ — presne ako v tvojej firme pre turnusových
+      // zamestnancov (Úväzok na páske: 176h v apríli = 22 dní × 8h,
+      // nie 20 dní × 7,5h). Sviatok sa rieši len cez príplatok, keď naň
+      // pripadne odpracovaná zmena. Nastav "hodiny/deň" v Nastaveniach
+      // appky na 8, aby to sedelo presne.
       fundHours += opts.standardDailyHours;
     }
   }
