@@ -3,9 +3,5 @@ node_modules/
 .github_repo
 .env
 .env.*
-".vercel/" 
-".output/" 
-".vercel/" 
-".output/" 
-".vercel/" 
-".output/" 
+.vercel/
+.output/
