@@ -63,8 +63,8 @@ export interface PayrollConfig {
 }
 
 export const DEFAULT_PAYROLL: PayrollConfig = {
-  ppuRate: 12.5118,
-  tariffMonthly: 1510.0,
+  ppuRate: 0, // Nastav v Mzdových sadzbách podľa svojej výplatnej pásky (Priemer PPÚ)
+  tariffMonthly: 0, // Nastav v Mzdových sadzbách podľa svojej výplatnej pásky (Tarifný plat)
   afternoonRate: 0.8,
   nightRate: 1.43,
   minWageHourly: 5.259,
@@ -82,7 +82,7 @@ export const DEFAULT_PAYROLL: PayrollConfig = {
   attendanceBonus: 140,
   attendanceMonths: [3, 6, 9, 12],
   halfYearMonths: [5, 11],
-  food: 7.5,
+  food: 10.0,
   dds: 15.0,
   ddsEmployerTaxable: 15.0,
   nczd: 497.23,

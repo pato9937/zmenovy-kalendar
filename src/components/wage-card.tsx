@@ -39,6 +39,27 @@ export function WageCard({
     extras,
   });
 
+  const hasAnyShift = Object.values(days).some((d) => d.kind !== "off");
+  const needsSetup = payroll.tariffMonthly === 0 && hasAnyShift;
+
+  if (needsSetup) {
+    return (
+      <section className="rounded-2xl bg-card px-4 py-3 shadow-border">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          Mzda · {format(cursor, "LLLL", { locale: sk })}
+        </p>
+        <p className="mt-2 text-sm text-foreground">
+          Aby appka vedela počítať tvoju mzdu, nastav si najprv svoj tarifný plat a priemer PPÚ z
+          výplatnej pásky.
+        </p>
+        <Button className="mt-3 w-full" onClick={onOpenRates}>
+          <SlidersHorizontal className="mr-2 size-4" />
+          Nastaviť mzdové sadzby
+        </Button>
+      </section>
+    );
+  }
+
   return (
     <section className="rounded-2xl bg-card px-4 py-3 shadow-border">
       <div className="flex items-start justify-between gap-3">
