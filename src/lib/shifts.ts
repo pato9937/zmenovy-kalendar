@@ -86,7 +86,7 @@ export function netWorkHours(
   end: string,
   break12 = BREAK_12H,
 ): number {
-  if (kind === "off" || !start || !end) return 0;
+  if (kind === "off" || kind === "vacation" || kind === "trip" || !start || !end) return 0;
   const clock = durationHours(start, end);
   const unpaid =
     kind === "morning" || kind === "night" || (kind === "extra" && clock >= 11)
@@ -103,6 +103,12 @@ export function makeShift(
 ): DayShift {
   if (kind === "off") {
     return { kind, start: "", end: "", hours: 0, note, manual };
+  }
+  if (kind === "vacation") {
+    return { kind, start: "", end: "", hours: 11, note, manual };
+  }
+  if (kind === "trip") {
+    return { kind, start: "", end: "", hours: 8, note, manual, perDiem: 0 };
   }
   const { start, end } = timesForKind(kind, times);
   return {
