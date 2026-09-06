@@ -75,12 +75,24 @@ export function WageCard({
           value={extras.fundHoursOverride ?? 0}
           onCommit={(v) => setMonthExtras(key, { fundHoursOverride: v > 0 ? v : undefined })}
         />
+        <NumberField
+          label="Prenesené saldo (h)"
+          value={extras.balanceAdjustmentHours ?? 0}
+          onCommit={(v) => setMonthExtras(key, { balanceAdjustmentHours: v !== 0 ? v : undefined })}
+        />
       </div>
       <p className="mt-1 text-2xs text-subtle">
         Fond kolíše mesiac čo mesiac a nedá sa spoľahlivo predpočítať — odpíš číslo "Úväzok" z pásky
         (0 = automatický odhad z kalendára). "Dovolenka navyše" sa pripočíta k dňom označeným v
         kalendári ako Dovolenka — ak už máš dni vyplnené priamo v kalendári, tu nechaj 0.
+        "Prenesené saldo" je z poslednej pásky ("Saldo nadčasov") — kladné aj záporné číslo, appka
+        ho naprieč mesiacmi nesleduje sama. Vypláca sa max. 32 h nadčasu za mesiac.
       </p>
+      {p.perDiemTotal ? (
+        <p className="mt-1 text-2xs text-subtle">
+          Diéty z pracovných ciest tento mesiac: <span className="text-foreground">{formatEur(p.perDiemTotal)}</span> — nie sú súčasťou hrubej/čistej mzdy vyššie, platia sa mimo appky.
+        </p>
+      ) : null}
 
       <button
         type="button"

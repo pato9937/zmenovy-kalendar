@@ -77,6 +77,19 @@ export function PayrollPanel({ open, onOpenChange }: PayrollPanelProps) {
           </p>
         </Section>
 
+        <Section title="Skorší príchod">
+          <NumberField
+            label="Minúty navyše na zmenu"
+            value={payroll.earlyArrivalMinutes}
+            onCommit={(v) => setPayroll({ earlyArrivalMinutes: Math.max(0, v) })}
+          />
+          <p className="text-2xs text-subtle">
+            Pripočíta sa automaticky ku každej rannej/nočnej zmene so štandardným časom
+            (6:00–18:00 / 18:00–06:00). Ak si pre konkrétny deň čas ručne upravil, tento bonus sa
+            už nepridáva — ráta sa presne to, čo je zadané.
+          </p>
+        </Section>
+
         <Section title="Pravidelné príplatky">
           <div className="grid grid-cols-2 gap-2">
             <NumberField label="Cestovné €" value={payroll.travel} onCommit={(v) => setPayroll({ travel: v })} />

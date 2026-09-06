@@ -9,7 +9,7 @@ import {
 import { durationHours, fromISODate, toISODate } from "./dates";
 import { isDayOfRest } from "./holidays";
 
-export type ShiftKind = "morning" | "night" | "shift8" | "extra" | "vacation" | "off";
+export type ShiftKind = "morning" | "night" | "shift8" | "extra" | "vacation" | "trip" | "off";
 export type PatternType = "rot12" | "week8";
 
 export interface DayShift {
@@ -19,6 +19,7 @@ export interface DayShift {
   hours: number;
   note: string;
   manual: boolean;
+  perDiem?: number; // Diéta za pracovnú cestu (€) — platená mimo výplaty, len evidenčné
 }
 
 export interface PatternTimes {
@@ -48,6 +49,7 @@ export const KIND_LABEL: Record<ShiftKind, string> = {
   shift8: "8-hodinová",
   extra: "Navyše",
   vacation: "Dovolenka",
+  trip: "Pracovná cesta",
   off: "Voľno",
 };
 
@@ -57,6 +59,7 @@ export const KIND_SHORT: Record<ShiftKind, string> = {
   shift8: "8",
   extra: "+",
   vacation: "D",
+  trip: "C",
   off: "V",
 };
 

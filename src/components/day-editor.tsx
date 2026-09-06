@@ -7,7 +7,7 @@ import { BREAK_12H, KIND_LABEL, netWorkHours, type ShiftKind } from "@/lib/shift
 import { useShiftStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-const KINDS: ShiftKind[] = ["morning", "night", "shift8", "extra", "vacation", "off"];
+const KINDS: ShiftKind[] = ["morning", "night", "shift8", "extra", "vacation", "trip", "off"];
 
 interface DayEditorProps {
   iso: string | null;
@@ -42,9 +42,11 @@ export function DayEditor({ iso, onClose, onMove }: DayEditorProps) {
           ? holiday.name
           : kind === "vacation"
             ? `Dovolenka · ${(shift?.hours ?? 0).toString().replace(".", ",")} h`
-            : kind !== "off" && shift
-              ? formatRange(shift.start, shift.end, true)
-              : "Voľný deň"
+            : kind === "trip"
+              ? `Pracovná cesta · ${(shift?.hours ?? 0).toString().replace(".", ",")} h`
+              : kind !== "off" && shift
+                ? formatRange(shift.start, shift.end, true)
+                : "Voľný deň"
       }
     >
       {iso ? (
@@ -79,28 +81,50 @@ export function DayEditor({ iso, onClose, onMove }: DayEditorProps) {
             </div>
           </div>
 
-          {kind === "vacation" ? (
+          {kind === "vacation" || kind === "trip" ? (
             <label className="block">
-              <span className="text-xs font-medium text-muted-foreground">Hodiny dovolenky</span>
+              <span className="text-xs font-medium text-muted-foreground">
+                {kind === "vacation" ? "Hodiny dovolenky" : "Hodiny pracovnej cesty"}
+              </span>
               <input
                 type="number"
                 inputMode="decimal"
                 step="0.5"
                 min={0}
-                value={shift?.hours ?? 11}
+                value={shift?.hours ?? (kind === "vacation" ? 11 : 8)}
                 onChange={(e) => {
                   const v = Number(e.target.value.replace(",", "."));
-                  updateDay(iso, { hours: Number.isFinite(v) ? Math.max(0, v) : 0, kind: "vacation", start: "", end: "" });
+                  updateDay(iso, { hours: Number.isFinite(v) ? Math.max(0, v) : 0, kind, start: "", end: "" });
                 }}
                 className="mt-1 h-11 w-full rounded-xl bg-surface-2 px-3 text-base text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
               <span className="mt-1 block text-2xs text-subtle">
-                Zvyčajne toľko, koľko by bola trvala zmena, ktorú dovolenka nahrádza (12 h zmena = 11 h platených). Platí sa z priemeru PPÚ.
+                {kind === "vacation"
+                  ? "Zvyčajne toľko, koľko by bola trvala zmena, ktorú dovolenka nahrádza (12 h zmena = 11 h platených). Platí sa z priemeru PPÚ."
+                  : "Ráta sa do odpracovaných hodín (fond/nadčas), ale bez poobedného/nočného/víkendového/sviatočného príplatku. Diéty rieš mimo appky."}
               </span>
             </label>
           ) : null}
 
-          {kind !== "off" && kind !== "vacation" ? (
+          {kind === "trip" ? (
+            <label className="block">
+              <span className="text-xs font-medium text-muted-foreground">Diéta (€) — len evidenčné, neráta sa do výplaty</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.5"
+                min={0}
+                value={shift?.perDiem ?? 0}
+                onChange={(e) => {
+                  const v = Number(e.target.value.replace(",", "."));
+                  updateDay(iso, { perDiem: Number.isFinite(v) ? Math.max(0, v) : 0, kind, start: "", end: "" });
+                }}
+                className="mt-1 h-11 w-full rounded-xl bg-surface-2 px-3 text-base text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </label>
+          ) : null}
+
+          {kind !== "off" && kind !== "vacation" && kind !== "trip" ? (
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
                 <span className="text-xs font-medium text-muted-foreground">Od</span>
@@ -190,6 +214,7 @@ function chipActive(kind: ShiftKind) {
   if (kind === "shift8") return "bg-shift8-dim text-shift8";
   if (kind === "extra") return "bg-extra-dim text-extra";
   if (kind === "vacation") return "bg-vacation-dim text-vacation";
+  if (kind === "trip") return "bg-trip-dim text-trip";
   return "bg-off-dim text-off-fg";
 }
 

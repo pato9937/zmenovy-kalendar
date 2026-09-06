@@ -1,7 +1,7 @@
 import { addDays, eachDayOfInterval, endOfMonth, isWeekend, startOfMonth } from "date-fns";
 import { fromISODate, toISODate, toMinutes } from "./dates";
 import { isPublicHoliday } from "./holidays";
-import { BREAK_12H, netWorkHours, type DayShift } from "./shifts";
+import { BREAK_12H, DEFAULT_TIMES, netWorkHours, type DayShift } from "./shifts";
 
 // src/lib/payroll.ts
 //
@@ -39,6 +39,7 @@ export interface PayrollConfig {
   minWageHourly: number;      // Min. hodinová mzda (40h/týž.) pre AKTUÁLNY ROK — mení sa každý 1.1., over si aktuálnu sumu; 2026 = 5,259 €
   weekendRate: number;        // Príplatok So/Ne — empiricky pozorované 6,09–6,66 €/h naprieč mesiacmi (kolíše, presný mechanizmus sa nepodarilo dokopy vysvetliť — priebežne uprav podľa najnovšej pásky)
   vykonBonusPercent: number;  // Výkonnostný bonus 0–10 % zo (základná mzda + zákl. za nadčas) — diskrétny, zadaj ručne za daný mesiac
+  earlyArrivalMinutes: number; // Predvolený "skorší príchod" pripočítaný ku KAŽDEJ rannej/nočnej zmene (default 15 min) — použije sa len na dni, kde si nechal štandardný čas zmeny; ak si na konkrétny deň čas ručne upravil, ráta sa presne to, čo je zadané, bez tohto bonusu
   holidayPercent: number;     // Sviatok: 100 % z PPÚ
   overtimePercent: number;    // Nadčas — príplatok: 25 % z PPÚ
   afternoonFrom: string;
@@ -68,6 +69,7 @@ export const DEFAULT_PAYROLL: PayrollConfig = {
   minWageHourly: 5.259,
   weekendRate: 6.66,
   vykonBonusPercent: 0,
+  earlyArrivalMinutes: 15,
   holidayPercent: 100,
   overtimePercent: 25,
   afternoonFrom: "14:00",
@@ -93,6 +95,7 @@ export interface MonthExtras {
   vacationHours: number;
   extraGross: number;
   fundHoursOverride?: number; // Ak zadané, použije sa NAMIESTO vypočítaného fondu — zadaj priamo číslo "Úväzok" z pásky (kolíše mesiac čo mesiac, napr. 176h alebo 132h, nedá sa spoľahlivo predpočítať)
+  balanceAdjustmentHours?: number; // Prenesené saldo nadčasov z predošlého mesiaca (napr. "Saldo nadčasov" z poslednej pásky) — appka si ho naprieč mesiacmi nepamätá sama, zadaj ho ručne každý mesiac nanovo. Vypláca sa max. 32h/mesiac.
 }
 
 export const EMPTY_EXTRAS: MonthExtras = { vacationHours: 0, extraGross: 0 };
@@ -212,6 +215,7 @@ export interface PayrollBreakdown {
   vacationHours: number;
   fundHours: number;
   overtimeHours: number;
+  perDiemTotal: number; // Súčet diét z dní "Pracovná cesta" — informačné, NIE je súčasťou hrubej/čistej mzdy
   afternoonHours: number;
   nightHours: number;
   weekendHours: number;
@@ -303,6 +307,7 @@ export function computeMonthPayroll(opts: {
   let weekendHours = 0;
   let holidayHours = 0;
   let calendarVacationHours = 0;
+  let perDiemTotal = 0;
 
   for (const date of eachDayOfInterval({ start, end })) {
     if (date < gate) continue;
@@ -311,8 +316,28 @@ export function computeMonthPayroll(opts: {
     const kind = shift?.kind ?? "off";
     if (kind === "vacation") {
       calendarVacationHours += shift?.hours ?? 0;
+    } else if (kind === "trip") {
+      // Pracovná cesta: flat hodiny, žiadne poobedné/nočné/víkendové/sviatočné
+      // príplatky (bežná zahraničná pracovná doba, diéty sa riešia mimo appky).
+      workHours += shift?.hours ?? 0;
+      perDiemTotal += shift?.perDiem ?? 0;
     } else if (kind !== "off" && shift?.start && shift?.end) {
-      const paid = netWorkHours(kind, shift.start, shift.end, BREAK_12H);
+      let paid = netWorkHours(kind, shift.start, shift.end, BREAK_12H);
+      // Predvolený "skorší príchod" (napr. 15 min) sa pripočíta len na
+      // dni, kde je čas zmeny presne štandardný (06:00–18:00 /
+      // 18:00–06:00) — teda si ho v ten deň ručne needitoval. Ak si
+      // "Od"/"Do" pre konkrétny deň zmenil, ráta sa presne to, čo je
+      // zadané, bez tohto bonusu (predpokladá sa, že si to už zohľadnil
+      // priamo v zadanom čase). Zjednodušene sa pripočítava len do
+      // odpracovaných/nadčasových hodín, nie do rozpisu poobedný/
+      // nočný/víkendový/sviatočný príplatok (na to slúži ručná úprava
+      // konkrétneho dňa v kalendári).
+      const isDefaultTiming =
+        (kind === "morning" && shift.start === DEFAULT_TIMES.morningStart && shift.end === DEFAULT_TIMES.morningEnd) ||
+        (kind === "night" && shift.start === DEFAULT_TIMES.nightStart && shift.end === DEFAULT_TIMES.nightEnd);
+      if (isDefaultTiming && cfg.earlyArrivalMinutes > 0) {
+        paid = roundCents(paid + cfg.earlyArrivalMinutes / 60);
+      }
       workHours += paid;
       const prem = shiftPremiumHours(iso, shift.start, shift.end, paid, cfg);
       afternoonHours += prem.afternoon;
@@ -345,8 +370,25 @@ export function computeMonthPayroll(opts: {
   // kalendár nie je takto vyplnený deň po dni).
   const vacationHours = Math.max(0, calendarVacationHours + extras.vacationHours);
   const remainingFund = Math.max(0, fundHours - vacationHours);
-  const overtimeHours = Math.max(0, workHours - remainingFund);
-  const regularHours = Math.max(0, workHours - overtimeHours);
+
+  // Regulárne hodiny vychádzajú ČISTO z toho, čo je tento mesiac
+  // reálne v kalendári (žiadne prenesené saldo) — presne toľko, koľko
+  // reálne pokrýva fond tohto mesiaca.
+  const regularHours = Math.min(workHours, remainingFund);
+  const rawOvertimeBasis = workHours - remainingFund; // môže byť aj záporné (menej odpracované než fond)
+
+  // Prenesené saldo z minulého mesiaca (napr. "Saldo nadčasov" z
+  // poslednej pásky — zadaj ho v appke ručne, appka si ho naprieč
+  // mesiacmi nepamätá sama). Kladné = mal si nadčas navyše, ktorý sa
+  // ešte nevyplatil; záporné = dlžíš hodiny. Vypláca sa maximálne
+  // 32 h nadčasu za mesiac (zvyšok nad 32 h sa ďalej neprenáša
+  // automaticky — over si na nasledujúcej páske skutočný zostatok
+  // a zadaj ho nabudúce nanovo). Ak je súčet záporný alebo nula,
+  // nevypláca sa nič a ani sa nič nestrháva — jednoducho sa čaká,
+  // kým sa saldo postupne vyrovná.
+  const carryIn = extras.balanceAdjustmentHours ?? 0;
+  const overtimeBasisWithCarry = rawOvertimeBasis + carryIn;
+  const overtimeHours = Math.max(0, Math.min(32, overtimeBasisWithCarry));
 
   // Odvodená hodinová sadzba z tarifného platu — mení sa mesiac čo
   // mesiac podľa toho, koľko má mesiac fondových hodín (presne ako
@@ -400,6 +442,7 @@ export function computeMonthPayroll(opts: {
 
   return {
     workHours: roundCents(workHours),
+    perDiemTotal: roundCents(perDiemTotal),
     vacationHours: roundCents(vacationHours),
     fundHours: roundCents(fundHours),
     overtimeHours: roundCents(overtimeHours),
