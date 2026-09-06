@@ -175,10 +175,13 @@ export default defineConfig(({ command, isPreview }) => ({
             // manifest + head-tag middleware). Nitro v3 defaults serverDir to
             // false, so removing this silently unwires /?install=1 on deploys.
             serverDir: "./server",
-            // 🔥 TOTO PRINÚTI NITRO ZABALIŤ TSLIB PRIAMO DO PRODUKČNEJ FUNKCIE VERCELU:
+            // Radix UI packages import `tslib` at runtime, but Nitro's file
+            // tracer doesn't always pick it up as a transitive dependency on
+            // Vercel's serverless build, causing ERR_MODULE_NOT_FOUND at
+            // runtime. Force-include it explicitly.
             externals: {
-              inline: ["tslib", "@radix-ui/react-dialog", "@radix-ui/react-primitive", "@radix-ui/primitive"]
-            }
+              traceInclude: ["node_modules/tslib"],
+            },
           }),
         ]
       : []),
