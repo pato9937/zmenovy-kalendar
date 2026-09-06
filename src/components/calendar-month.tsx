@@ -252,12 +252,16 @@ function DayCell({
           Sviatok
         </span>
       ) : null}
-      {kind !== "off" && shift ? (
+      {kind !== "off" && kind !== "vacation" && shift ? (
         <span className="mt-auto w-full truncate whitespace-nowrap text-2xs font-medium tabular-nums leading-tight">
           {formatTimeShort(shift.start)}–{formatTimeShort(shift.end)}
           {shift.end && shift.start && shift.end <= shift.start ? (
             <span className="opacity-70">+1</span>
           ) : null}
+        </span>
+      ) : kind === "vacation" ? (
+        <span className="mt-auto w-full truncate text-2xs font-medium leading-tight">
+          Dovolenka
         </span>
       ) : holiday ? (
         <span className="mt-auto w-full truncate text-2xs leading-tight text-holiday">
@@ -273,6 +277,7 @@ function cellTone(kind: ShiftKind, weekend: boolean) {
   if (kind === "night") return "bg-night-dim text-night";
   if (kind === "shift8") return "bg-shift8-dim text-shift8";
   if (kind === "extra") return "bg-extra-dim text-extra";
+  if (kind === "vacation") return "bg-vacation-dim text-vacation";
   if (weekend) return "bg-weekend text-subtle";
   return "bg-off-dim text-off-fg";
 }

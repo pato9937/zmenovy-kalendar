@@ -61,7 +61,7 @@ export function WageCard({
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         <NumberField
-          label="Dovolenka (h)"
+          label="Dovolenka navyše (h)"
           value={extras.vacationHours}
           onCommit={(v) => setMonthExtras(key, { vacationHours: Math.max(0, v) })}
         />
@@ -70,7 +70,17 @@ export function WageCard({
           value={extras.extraGross}
           onCommit={(v) => setMonthExtras(key, { extraGross: v })}
         />
+        <NumberField
+          label="Fond — Úväzok (h)"
+          value={extras.fundHoursOverride ?? 0}
+          onCommit={(v) => setMonthExtras(key, { fundHoursOverride: v > 0 ? v : undefined })}
+        />
       </div>
+      <p className="mt-1 text-2xs text-subtle">
+        Fond kolíše mesiac čo mesiac a nedá sa spoľahlivo predpočítať — odpíš číslo "Úväzok" z pásky
+        (0 = automatický odhad z kalendára). "Dovolenka navyše" sa pripočíta k dňom označeným v
+        kalendári ako Dovolenka — ak už máš dni vyplnené priamo v kalendári, tu nechaj 0.
+      </p>
 
       <button
         type="button"

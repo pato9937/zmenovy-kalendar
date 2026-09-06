@@ -73,6 +73,7 @@ function stripTone(kind: ShiftKind, weekend: boolean) {
   if (kind === "night") return "bg-night-dim text-night";
   if (kind === "shift8") return "bg-shift8-dim text-shift8";
   if (kind === "extra") return "bg-extra-dim text-extra";
+  if (kind === "vacation") return "bg-vacation-dim text-vacation";
   if (weekend) return "bg-weekend text-subtle";
   return "bg-off-dim text-off-fg";
 }

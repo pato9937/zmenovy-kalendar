@@ -7,9 +7,9 @@ import {
   isWeekend,
 } from "date-fns";
 import { durationHours, fromISODate, toISODate } from "./dates";
-// isDayOfRest už tu nepoužívame — sviatky sa do fondu naďalej počítajú (viď computeStats nižšie).
+import { isDayOfRest } from "./holidays";
 
-export type ShiftKind = "morning" | "night" | "shift8" | "extra" | "off";
+export type ShiftKind = "morning" | "night" | "shift8" | "extra" | "vacation" | "off";
 export type PatternType = "rot12" | "week8";
 
 export interface DayShift {
@@ -47,6 +47,7 @@ export const KIND_LABEL: Record<ShiftKind, string> = {
   night: "Nočná",
   shift8: "8-hodinová",
   extra: "Navyše",
+  vacation: "Dovolenka",
   off: "Voľno",
 };
 
@@ -55,6 +56,7 @@ export const KIND_SHORT: Record<ShiftKind, string> = {
   night: "N",
   shift8: "8",
   extra: "+",
+  vacation: "D",
   off: "V",
 };
 
@@ -203,11 +205,7 @@ export function computeStats(opts: {
     else if (kind === "extra") stats.extraCount += 1;
     else stats.offCount += 1;
 
-    if (!isWeekend(date)) {
-      // Fond = všetky pracovné dni (Po–Pi), sviatky sa NEODPOČÍTAVAJÚ —
-      // pozri poznámku v payroll.ts (turnusoví zamestnanci, Úväzok na
-      // páske 176h/apríl = 22 dní × 8h). Nastav "Denný fond" v Nastaveniach
-      // na 8h, aby toto sedelo s pásku.
+    if (!isWeekend(date) && !isDayOfRest(iso)) {
       stats.fundDays += 1;
       stats.standardHours += opts.standardDailyHours;
     }

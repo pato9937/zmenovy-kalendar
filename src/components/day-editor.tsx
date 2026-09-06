@@ -7,7 +7,7 @@ import { BREAK_12H, KIND_LABEL, netWorkHours, type ShiftKind } from "@/lib/shift
 import { useShiftStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-const KINDS: ShiftKind[] = ["morning", "night", "shift8", "extra", "off"];
+const KINDS: ShiftKind[] = ["morning", "night", "shift8", "extra", "vacation", "off"];
 
 interface DayEditorProps {
   iso: string | null;
@@ -40,9 +40,11 @@ export function DayEditor({ iso, onClose, onMove }: DayEditorProps) {
       description={
         holiday
           ? holiday.name
-          : kind !== "off" && shift
-            ? formatRange(shift.start, shift.end, true)
-            : "Voľný deň"
+          : kind === "vacation"
+            ? `Dovolenka · ${(shift?.hours ?? 0).toString().replace(".", ",")} h`
+            : kind !== "off" && shift
+              ? formatRange(shift.start, shift.end, true)
+              : "Voľný deň"
       }
     >
       {iso ? (
@@ -77,7 +79,28 @@ export function DayEditor({ iso, onClose, onMove }: DayEditorProps) {
             </div>
           </div>
 
-          {kind !== "off" ? (
+          {kind === "vacation" ? (
+            <label className="block">
+              <span className="text-xs font-medium text-muted-foreground">Hodiny dovolenky</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.5"
+                min={0}
+                value={shift?.hours ?? 11}
+                onChange={(e) => {
+                  const v = Number(e.target.value.replace(",", "."));
+                  updateDay(iso, { hours: Number.isFinite(v) ? Math.max(0, v) : 0, kind: "vacation", start: "", end: "" });
+                }}
+                className="mt-1 h-11 w-full rounded-xl bg-surface-2 px-3 text-base text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+              <span className="mt-1 block text-2xs text-subtle">
+                Zvyčajne toľko, koľko by bola trvala zmena, ktorú dovolenka nahrádza (12 h zmena = 11 h platených). Platí sa z priemeru PPÚ.
+              </span>
+            </label>
+          ) : null}
+
+          {kind !== "off" && kind !== "vacation" ? (
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
                 <span className="text-xs font-medium text-muted-foreground">Od</span>
@@ -166,6 +189,7 @@ function chipActive(kind: ShiftKind) {
   if (kind === "night") return "bg-night-dim text-night";
   if (kind === "shift8") return "bg-shift8-dim text-shift8";
   if (kind === "extra") return "bg-extra-dim text-extra";
+  if (kind === "vacation") return "bg-vacation-dim text-vacation";
   return "bg-off-dim text-off-fg";
 }
 

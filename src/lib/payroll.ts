@@ -31,21 +31,13 @@ import { BREAK_12H, netWorkHours, type DayShift } from "./shifts";
 // než by dal tento vzorec — možno retroaktívna úprava alebo iný mesačný
 // základ; pri bežných mesiacoch by mal tento vzorec sedieť presne.
 
-export type TariffClass = "1-3" | "4-5" | "6-7" | "8-12";
-
-export const WEEKEND_RATE_BY_CLASS: Record<TariffClass, number> = {
-  "1-3": 3.58,
-  "4-5": 4.28,
-  "6-7": 4.98,
-  "8-12": 5.68,
-};
-
 export interface PayrollConfig {
   ppuRate: number;            // Priemer PPÚ (kvartálne prepočítavaný priemerný zárobok): 12,5118 €/h
   tariffMonthly: number;      // Tarifný plat (mesačný): 1 510,00 €
-  tariffClass: TariffClass;   // Tarifná trieda — určuje sadzbu za So/Ne (u teba: "6-7")
-  afternoonRate: number;      // Poobedný príplatok: 0,80 €/h — 14:00–22:00
-  nightRate: number;          // Nočný príplatok: 1,43 €/h (plochá sadzba) — 22:00–06:00
+  afternoonRate: number;      // Poobedný príplatok: 0,80 €/h — 14:00–22:00 (potvrdené naprieč 5 mesiacmi, stabilné)
+  nightRate: number;          // Firemná nočná sadzba (referenčná, v praxi vždy prekonaná zákonným minimom nižšie): 1,43 €/h
+  minWageHourly: number;      // Min. hodinová mzda (40h/týž.) pre AKTUÁLNY ROK — mení sa každý 1.1., over si aktuálnu sumu; 2026 = 5,259 €
+  weekendRate: number;        // Príplatok So/Ne — empiricky pozorované 6,09–6,66 €/h naprieč mesiacmi (kolíše, presný mechanizmus sa nepodarilo dokopy vysvetliť — priebežne uprav podľa najnovšej pásky)
   vykonBonusPercent: number;  // Výkonnostný bonus 0–10 % zo (základná mzda + zákl. za nadčas) — diskrétny, zadaj ručne za daný mesiac
   holidayPercent: number;     // Sviatok: 100 % z PPÚ
   overtimePercent: number;    // Nadčas — príplatok: 25 % z PPÚ
@@ -53,15 +45,15 @@ export interface PayrollConfig {
   afternoonTo: string;
   nightFrom: string;
   nightTo: string;
-  travel: number;             // Cestovné: 60 €
+  travel: number;             // Cestovné: 60 € (pozor: v mesiaci s menej odpracovanými dňami býva nižšie, možno pomerné — over si to, ak máš kratší mesiac)
   attendance: number;         // Dochádzkový bonus, bežný mesiac: 70 €
   attendanceBonus: number;    // Dochádzkový bonus, kvartálny mesiac: 140 €
   attendanceMonths: number[]; // Mesiace s kvartálnym bonusom
   halfYearMonths: number[];   // Mesiace s polročnou prémiou (máj, november)
-  food: number;               // Zrážka za stravu: 7,50 €
+  food: number;               // Zrážka za stravu: 7,50 € (pozor: kolíše aj toto — videné aj 4 € a 10 €, over si to na páske)
   dds: number;                // DDS zamestnanec — zrážka: 15,00 €
-  nczd: number;               // Odpočet na daňovníka (mesačne): 497,23 € — aktuálna suma pre 2026 (firemný vzorový doklad má staršiu hodnotu 410,24 €, nesedí na skutočnú pásku)
-  healthRate: number;         // Zdravotné poistenie zamestnanca: 4 %
+  nczd: number;               // Odpočet na daňovníka (mesačne): 497,23 € — aktuálna suma pre 2026 (v roku 2025 to bolo menej, napr. 479,48 €)
+  healthRate: number;         // Zdravotné poistenie zamestnanca: 5 % — POZOR: do 12/2025 to bolo 4 %, od 1/2026 je to 5 % (celoštátna zmena)
   sicknessRate: number;       // Nemocenské poistenie: 1,4 %
   disabilityRate: number;     // Invalidné poistenie: 3 %
   pensionRate: number;        // Starobné poistenie: 4 %
@@ -71,9 +63,10 @@ export interface PayrollConfig {
 export const DEFAULT_PAYROLL: PayrollConfig = {
   ppuRate: 12.5118,
   tariffMonthly: 1510.0,
-  tariffClass: "6-7",
   afternoonRate: 0.8,
   nightRate: 1.43,
+  minWageHourly: 5.259,
+  weekendRate: 6.66,
   vykonBonusPercent: 0,
   holidayPercent: 100,
   overtimePercent: 25,
@@ -89,7 +82,7 @@ export const DEFAULT_PAYROLL: PayrollConfig = {
   food: 7.5,
   dds: 15.0,
   nczd: 497.23,
-  healthRate: 4,
+  healthRate: 5,
   sicknessRate: 1.4,
   disabilityRate: 3,
   pensionRate: 4,
@@ -99,6 +92,7 @@ export const DEFAULT_PAYROLL: PayrollConfig = {
 export interface MonthExtras {
   vacationHours: number;
   extraGross: number;
+  fundHoursOverride?: number; // Ak zadané, použije sa NAMIESTO vypočítaného fondu — zadaj priamo číslo "Úväzok" z pásky (kolíše mesiac čo mesiac, napr. 176h alebo 132h, nedá sa spoľahlivo predpočítať)
 }
 
 export const EMPTY_EXTRAS: MonthExtras = { vacationHours: 0, extraGross: 0 };
@@ -124,11 +118,13 @@ export function formatEur(n: number, digits = 2): string {
 }
 
 /**
- * Sadzba za So/Ne príplatok podľa tarifnej triedy zamestnanca —
- * priama tabuľka z firemného dokumentu (nie zákonné minimum).
+ * Nočný príplatok: Zákonník práce garantuje minimálnu výšku (40 % z
+ * minimálnej hodinovej mzdy). Firemná referenčná sadzba (1,43 €/h) je
+ * historicky nižšia než aktuálne zákonné minimum — v praxi teda vždy
+ * platí to vyššie číslo. Over si `minWageHourly` každý rok k 1.1.
  */
-function weekendRate(cfg: PayrollConfig): number {
-  return WEEKEND_RATE_BY_CLASS[cfg.tariffClass];
+function effectiveNightRate(cfg: PayrollConfig): number {
+  return Math.max(cfg.nightRate, cfg.minWageHourly * 0.4);
 }
 
 function windows(from: string, to: string): Array<[number, number]> {
@@ -172,9 +168,14 @@ export interface PremiumHours {
 /**
  * Rozdelí odpracované (platené) hodiny jednej zmeny podľa reálneho
  * prekryvu času zmeny s poobedným/nočným pásmom a podľa toho, či
- * segment padá na víkend alebo sviatok. Toto je presne to, čo
- * v skrátenej verzii kódu chýbalo — tam sa poobedné/nočné hodiny
- * odhadovali paušálne podľa druhu zmeny namiesto reálneho výpočtu.
+ * segment padá na víkend. Sviatočný príplatok sa ale NEROBÍ po
+ * segmentoch podľa kalendárneho dňa — podľa §122 Zákonníka práce a
+ * ustálenej praxe sa CELÁ zmena posudzuje podľa dňa, kedy ZAČÍNA:
+ *   - ak zmena začína V DEŇ SVIATKU → celá zmena (aj časť po polnoci
+ *     na druhý deň) má nárok na sviatočný príplatok
+ *   - ak zmena začína DEŇ PRED sviatkom (a končí ráno v deň sviatku)
+ *     → nepatrí žiadny sviatočný príplatok, ani za tú časť, čo
+ *     reálne padne do sviatočného dňa
  */
 export function shiftPremiumHours(
   iso: string,
@@ -200,8 +201,9 @@ export function shiftPremiumHours(
     out.night += (sumOverlap(seg.span, nit) / 60) * factor;
     const dow = date.getDay();
     if (dow === 6 || dow === 0) out.weekend += hours;
-    if (isPublicHoliday(seg.iso)) out.holiday += hours;
   }
+  // Sviatok: celá zmena podľa dňa ZAČIATKU (viď poznámka vyššie), nie po segmentoch.
+  if (isPublicHoliday(iso)) out.holiday = paidHours;
   return out;
 }
 
@@ -300,13 +302,16 @@ export function computeMonthPayroll(opts: {
   let nightHours = 0;
   let weekendHours = 0;
   let holidayHours = 0;
+  let calendarVacationHours = 0;
 
   for (const date of eachDayOfInterval({ start, end })) {
     if (date < gate) continue;
     const iso = toISODate(date);
     const shift = opts.days[iso];
     const kind = shift?.kind ?? "off";
-    if (kind !== "off" && shift?.start && shift?.end) {
+    if (kind === "vacation") {
+      calendarVacationHours += shift?.hours ?? 0;
+    } else if (kind !== "off" && shift?.start && shift?.end) {
       const paid = netWorkHours(kind, shift.start, shift.end, BREAK_12H);
       workHours += paid;
       const prem = shiftPremiumHours(iso, shift.start, shift.end, paid, cfg);
@@ -316,17 +321,29 @@ export function computeMonthPayroll(opts: {
       holidayHours += prem.holiday;
     }
     if (!isWeekend(date)) {
-      // Fond sa počíta zo VŠETKÝCH pracovných dní (Po–Pi), sviatky sa
-      // NEODPOČÍTAVAJÚ — presne ako v tvojej firme pre turnusových
-      // zamestnancov (Úväzok na páske: 176h v apríli = 22 dní × 8h,
-      // nie 20 dní × 7,5h). Sviatok sa rieši len cez príplatok, keď naň
-      // pripadne odpracovaná zmena. Nastav "hodiny/deň" v Nastaveniach
-      // appky na 8, aby to sedelo presne.
-      fundHours += opts.standardDailyHours;
+      // Fond pre VÝPOČET SADZBY (base pay rate) je NEZÁVISLÝ od
+      // nastavenia "Denný fond" (to slúži len na sledovanie saldo/
+      // nadčasu podľa tvojho reálneho úväzku, napr. 7,5h). Firma tu
+      // používa štandardný celoštátny fond 8h/pracovný deň, sviatky sa
+      // nedčítavajú (turnusoví zamestnanci) — potvrdené na páske:
+      // 22 dní × 8h = 176h v apríli, presne sedí na Základná mzda.
+      fundHours += 8;
     }
   }
 
-  const vacationHours = Math.max(0, extras.vacationHours);
+  // "Úväzok" na páske kolíše mesiac čo mesiac spôsobom, ktorý sa
+  // nepodarilo spoľahlivo predpovedať len z kalendára (napr. apríl
+  // 176h, ale február 132h pri rovnakom type mesiaca) — ak je k
+  // dispozícii ručne zadaná hodnota z konkrétnej pásky, použi tú
+  // namiesto odhadu.
+  if (typeof extras.fundHoursOverride === "number" && extras.fundHoursOverride > 0) {
+    fundHours = extras.fundHoursOverride;
+  }
+
+  // Dovolenka sa spočíta z dní označených v kalendári ako "Dovolenka"
+  // A pripočíta sa k ručne zadanému číslu (napr. pre mesiace, keď ešte
+  // kalendár nie je takto vyplnený deň po dni).
+  const vacationHours = Math.max(0, calendarVacationHours + extras.vacationHours);
   const remainingFund = Math.max(0, fundHours - vacationHours);
   const overtimeHours = Math.max(0, workHours - remainingFund);
   const regularHours = Math.max(0, workHours - overtimeHours);
@@ -340,8 +357,8 @@ export function computeMonthPayroll(opts: {
   const overtimeBase = overtimeHours * derivedRate;
   const vacationPay = vacationHours * cfg.ppuRate;
   const afternoonPay = afternoonHours * cfg.afternoonRate;
-  const nightPay = nightHours * cfg.nightRate;
-  const weekendPay = weekendHours * weekendRate(cfg);
+  const nightPay = nightHours * effectiveNightRate(cfg);
+  const weekendPay = weekendHours * cfg.weekendRate;
   const holidayPay = holidayHours * cfg.ppuRate * (cfg.holidayPercent / 100);
   const overtimePay = overtimeHours * cfg.ppuRate * (cfg.overtimePercent / 100);
   const vykonBonus = roundCents((base + overtimeBase) * (cfg.vykonBonusPercent / 100));

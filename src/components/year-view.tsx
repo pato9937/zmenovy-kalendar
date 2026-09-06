@@ -143,6 +143,7 @@ function miniTone(kind: ShiftKind | null) {
   if (kind === "night") return "bg-night";
   if (kind === "shift8") return "bg-shift8";
   if (kind === "extra") return "bg-extra";
+  if (kind === "vacation") return "bg-vacation";
   if (kind === "off") return "bg-off";
   return "bg-transparent";
 }
