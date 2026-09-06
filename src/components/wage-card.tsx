@@ -141,6 +141,7 @@ export function WageCard({
               ["Daň", `základ ${formatEur(p.taxBase)}`, -p.tax],
               ["Strava", null, -p.food],
               ["DDS", null, -p.dds],
+              p.mealVouchers ? ["Stravné lístky", null, p.mealVouchers] : null,
               p.annualTaxSettlement ? ["Ročné zúčt. dane", "jednorazovo", p.annualTaxSettlement] : null,
             ]}
             total={p.net}

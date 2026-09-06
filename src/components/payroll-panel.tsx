@@ -123,6 +123,18 @@ export function PayrollPanel({ open, onOpenChange }: PayrollPanelProps) {
           </div>
         </Section>
 
+        <Section title="Príjmy mimo hrubej mzdy">
+          <NumberField
+            label="Stravné lístky/gastro karta €"
+            value={payroll.mealVouchers}
+            onCommit={(v) => setPayroll({ mealVouchers: Math.max(0, v) })}
+          />
+          <p className="text-2xs text-subtle">
+            Koľko ti firma dáva na stravných lístkoch/gastro karte — nezdaňuje sa, pripočíta sa
+            priamo k čistej mzde na účet. Predvolene 0.
+          </p>
+        </Section>
+
         <Section title="Odvody a daň">
           <div className="grid grid-cols-2 gap-2">
             <NumberField label="Zdravotné %" value={payroll.healthRate} onCommit={(v) => setPayroll({ healthRate: v })} />

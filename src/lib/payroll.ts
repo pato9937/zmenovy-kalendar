@@ -53,6 +53,7 @@ export interface PayrollConfig {
   halfYearMonths: number[];   // Mesiace s polročnou prémiou (máj, november)
   food: number;               // Zrážka za stravu: 7,50 € (pozor: kolíše aj toto — videné aj 4 € a 10 €, over si to na páske)
   dds: number;                // DDS zamestnanec — zrážka: 15,00 €
+  mealVouchers: number;       // Stravné lístky/gastro karta od firmy — pripočíta sa priamo k čistej mzde (nezdaňuje sa, nejde do hrubého). Predvolene 0, nastav podľa toho, koľko ti firma dáva.
   ddsEmployerTaxable: number; // Príspevok zamestnávateľa na DDS (15 €) sa pripočítava k základu dane ako nepeňažný zdaniteľný príjem — potvrdené na 2 rôznych mesiacoch (rozdiel presne +15 € v Zákl.daň.mesač)
   nczd: number;               // Odpočet na daňovníka (mesačne): 497,23 € — aktuálna suma pre 2026 (v roku 2025 to bolo menej, napr. 479,48 €)
   healthRate: number;         // Zdravotné poistenie zamestnanca: 5 % — POZOR: do 12/2025 to bolo 4 %, od 1/2026 je to 5 % (celoštátna zmena)
@@ -84,6 +85,7 @@ export const DEFAULT_PAYROLL: PayrollConfig = {
   halfYearMonths: [5, 11],
   food: 10.0,
   dds: 15.0,
+  mealVouchers: 0,
   ddsEmployerTaxable: 15.0,
   nczd: 497.23,
   healthRate: 5,
@@ -248,6 +250,7 @@ export interface PayrollBreakdown {
   tax: number;
   food: number;
   dds: number;
+  mealVouchers: number;
   annualTaxSettlement: number;
   net: number;
 }
@@ -443,7 +446,7 @@ export function computeMonthPayroll(opts: {
   const food = cfg.food;
   const dds = cfg.dds;
   const annualTaxSettlement = extras.annualTaxSettlement ?? 0; // jednorazová položka "Ročné zúčt.dane" — kladné číslo z pásky (aj keď je tam so znamienkom mínus, je to REFUNDÁCIA, teda plus pre teba)
-  const net = roundCents(gross - insurance - tax - food - dds + annualTaxSettlement);
+  const net = roundCents(gross - insurance - tax - food - dds + cfg.mealVouchers + annualTaxSettlement);
 
   return {
     workHours: roundCents(workHours),
@@ -480,6 +483,7 @@ export function computeMonthPayroll(opts: {
     tax,
     food: roundCents(food),
     dds: roundCents(dds),
+    mealVouchers: roundCents(cfg.mealVouchers),
     annualTaxSettlement: roundCents(annualTaxSettlement),
     net,
   };
