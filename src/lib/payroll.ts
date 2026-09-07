@@ -79,8 +79,8 @@ export const DEFAULT_PAYROLL: PayrollConfig = {
   nightFrom: "22:00",
   nightTo: "06:00",
   travel: 0, // Nastav podľa svojej firmy — nie každá firma dáva rovnaké cestovné/tankovanie
-  attendance: 0, // Nastav podľa svojej firmy — nie každá firma dáva dochádzkovú prémiu
-  attendanceBonus: 0, // Nastav podľa svojej firmy (kvartálna dochádzková prémia, ak ju máš)
+  attendance: 60, // Nastav podľa svojej firmy — nie každá firma dáva dochádzkovú prémiu
+  attendanceBonus: 140, // Nastav podľa svojej firmy (kvartálna dochádzková prémia, ak ju máš)
   attendanceMonths: [3, 6, 9, 12],
   halfYearMonths: [5, 11],
   food: 0, // Nastav podľa svojej firmy — zrážka za stravu sa líši
