@@ -83,8 +83,8 @@ export const DEFAULT_PAYROLL: PayrollConfig = {
   attendanceBonus: 0, // Nastav podľa svojej firmy (kvartálna dochádzková prémia, ak ju máš)
   attendanceMonths: [3, 6, 9, 12],
   halfYearMonths: [5, 11],
-  food: 10.0,
-  dds: 15.0,
+  food: 0, // Nastav podľa svojej firmy — zrážka za stravu sa líši
+  dds: 0, // Nastav podľa svojej zmluvy o DDS (3. pilier), ak ho máš
   mealVouchers: 0,
   ddsEmployerTaxable: 15.0,
   nczd: 497.23,
