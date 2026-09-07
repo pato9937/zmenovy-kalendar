@@ -123,7 +123,7 @@ export function SetupWizard({ mode, onClose }: SetupWizardProps) {
             <div>
               <p className="font-medium text-foreground">Týždenné 7,5-hodinové</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Klasický fond Po–Pia, predvolene 6:00–13:30
+                Klasický fond Po–Pia, predvolene 6:00–14:00 (7,5 h práce + 30 min pauza)
               </p>
             </div>
             {type === "week8" ? (
@@ -157,7 +157,8 @@ export function SetupWizard({ mode, onClose }: SetupWizardProps) {
             <div>
               <p className="font-medium text-foreground">Striedavá ranná/poobedná (7,5 h)</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Týždeň ranná (6:00–13:30), týždeň poobedná (14:00–21:30) — strieda sa
+                Týždeň ranná (6:00–14:00), týždeň poobedná (14:00–22:00) — 7,5 h práce + 30 min
+                pauza, strieda sa
               </p>
             </div>
             {type === "week8alt" ? (

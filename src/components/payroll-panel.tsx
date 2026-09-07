@@ -93,15 +93,19 @@ export function PayrollPanel({ open, onOpenChange }: PayrollPanelProps) {
         <Section title="Pravidelné príplatky">
           <div className="grid grid-cols-2 gap-2">
             <NumberField label="Cestovné €" value={payroll.travel} onCommit={(v) => setPayroll({ travel: v })} />
-            <NumberField label="Prítomnostná €" value={payroll.attendance} onCommit={(v) => setPayroll({ attendance: v })} />
             <NumberField
-              label="Každý 3. mesiac €"
+              label="Prítomnostná — bežný mesiac €"
+              value={payroll.attendance}
+              onCommit={(v) => setPayroll({ attendance: v })}
+            />
+            <NumberField
+              label="Prítomnostná — kvartálny mesiac €"
               value={payroll.attendanceBonus}
               onCommit={(v) => setPayroll({ attendanceBonus: v })}
             />
           </div>
           <MonthsField
-            label="Mesiace prítomnostnej 140 €"
+            label={`Ktoré mesiace sú kvartálne (${payroll.attendanceBonus} €)`}
             value={payroll.attendanceMonths}
             onCommit={(v) => setPayroll({ attendanceMonths: v })}
           />

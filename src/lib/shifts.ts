@@ -40,13 +40,15 @@ export const DEFAULT_TIMES: PatternTimes = {
   nightStart: "18:00",
   nightEnd: "06:00",
   shift8Start: "06:00",
-  shift8End: "13:30",
+  shift8End: "14:00",
   shift8PmStart: "14:00",
-  shift8PmEnd: "21:30",
+  shift8PmEnd: "22:00",
 };
 
 /** Neplatená prestávka na 12-hodinovej zmene (6–18 / 18–6). */
 export const BREAK_12H = 1;
+/** Neplatená prestávka na 7,5h zmene (napr. 6:00–14:00 = 7,5h platených). */
+export const BREAK_SHIFT8 = 0.5;
 
 export const KIND_LABEL: Record<ShiftKind, string> = {
   morning: "Ranná",
@@ -98,7 +100,9 @@ export function netWorkHours(
   const unpaid =
     kind === "morning" || kind === "night" || (kind === "extra" && clock >= 11)
       ? break12
-      : 0;
+      : kind === "shift8"
+        ? BREAK_SHIFT8
+        : 0;
   return Math.round(Math.max(0, clock - unpaid) * 100) / 100;
 }
 

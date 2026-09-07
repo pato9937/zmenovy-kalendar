@@ -91,16 +91,23 @@ export function WageCard({
         </Button>
       </div>
 
-      <div className="mt-3">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <NumberField
           label="Dovolenka navyše (h)"
           value={extras.vacationHours}
           onCommit={(v) => setMonthExtras(key, { vacationHours: Math.max(0, v) })}
         />
+        <NumberField
+          label="Vybrať nadčas navyše (h)"
+          value={extras.balanceAdjustmentHours ?? 0}
+          onCommit={(v) => setMonthExtras(key, { balanceAdjustmentHours: v !== 0 ? v : undefined })}
+        />
       </div>
       <p className="mt-1 text-2xs text-subtle">
         "Dovolenka navyše" sa pripočíta k dňom označeným v kalendári ako Dovolenka — ak už máš dni
-        vyplnené priamo v kalendári, tu nechaj 0.
+        vyplnené priamo v kalendári, tu nechaj 0. "Vybrať nadčas navyše" — koľko hodín z
+        nazbieraného nadčasu (napr. z minulého mesiaca) chceš tento mesiac vyplatiť; vypláca sa max.
+        32 h/mesiac.
       </p>
       {p.perDiemTotal ? (
         <p className="mt-1 text-2xs text-subtle">
@@ -165,22 +172,16 @@ export function WageCard({
                 onCommit={(v) => setMonthExtras(key, { fundHoursOverride: v > 0 ? v : undefined })}
               />
               <NumberField
-                label="Prenesené saldo (h)"
-                value={extras.balanceAdjustmentHours ?? 0}
-                onCommit={(v) => setMonthExtras(key, { balanceAdjustmentHours: v !== 0 ? v : undefined })}
-              />
-              <NumberField
                 label="Ročné zúčt. dane (€)"
                 value={extras.annualTaxSettlement ?? 0}
                 onCommit={(v) => setMonthExtras(key, { annualTaxSettlement: v !== 0 ? v : undefined })}
               />
             </div>
             <p className="mt-1 text-2xs text-subtle">
-              Väčšinu mesiacov necháš všetky tri na 0. "Fond" použi len keď sa automatický odhad
-              rozchádza s páskou (odpíš "Úväzok" z pásky). "Prenesené saldo" je z "Saldo nadčasov" na
-              poslednej páske — appka si ho medzi mesiacmi nepamätá sama. "Ročné zúčt. dane" je
-              jednorazová položka (zvyčajne raz ročne) — zadaj ako kladné číslo (refundácia), aj keď
-              je na páske so znamienkom mínus.
+              Väčšinu mesiacov necháš oboje na 0. "Fond" použi len keď sa automatický odhad
+              rozchádza s páskou (odpíš "Úväzok" z pásky). "Ročné zúčt. dane" je jednorazová
+              položka (zvyčajne raz ročne) — zadaj ako kladné číslo (refundácia), aj keď je na
+              páske so znamienkom mínus.
             </p>
           </div>
         </div>
