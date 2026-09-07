@@ -1,6 +1,6 @@
 import { addDays, eachDayOfInterval, endOfMonth, isWeekend, startOfMonth } from "date-fns";
 import { fromISODate, toISODate, toMinutes } from "./dates";
-import { isPublicHoliday } from "./holidays";
+import { isDayOfRest } from "./holidays";
 import { BREAK_12H, DEFAULT_TIMES, netWorkHours, type DayShift } from "./shifts";
 
 // src/lib/payroll.ts
@@ -210,7 +210,7 @@ export function shiftPremiumHours(
     if (dow === 6 || dow === 0) out.weekend += hours;
   }
   // Sviatok: celá zmena podľa dňa ZAČIATKU (viď poznámka vyššie), nie po segmentoch.
-  if (isPublicHoliday(iso)) out.holiday = paidHours;
+  if (isDayOfRest(iso)) out.holiday = paidHours;
   return out;
 }
 
@@ -300,6 +300,7 @@ export function computeMonthPayroll(opts: {
   cfg: PayrollConfig;
   extras?: MonthExtras;
   times?: import("./shifts").PatternTimes; // skutočne nastavené časy zmien (Nastavenia) — ak chýba, použije sa DEFAULT_TIMES
+  pattern?: "rot12" | "week8" | "week8alt" | null; // typ rotácie — mení spôsob výpočtu fondu (turnusová 12h vs. bežná 7,5h/8h)
 }): PayrollBreakdown {
   const start = startOfMonth(opts.cursor);
   const end = endOfMonth(opts.cursor);
@@ -344,7 +345,8 @@ export function computeMonthPayroll(opts: {
       const isDefaultTiming =
         (kind === "morning" && shift.start === times.morningStart && shift.end === times.morningEnd) ||
         (kind === "night" && shift.start === times.nightStart && shift.end === times.nightEnd) ||
-        (kind === "shift8" && shift.start === times.shift8Start && shift.end === times.shift8End);
+        (kind === "shift8" && shift.start === times.shift8Start && shift.end === times.shift8End) ||
+        (kind === "shift8" && shift.start === times.shift8PmStart && shift.end === times.shift8PmEnd);
       if (isDefaultTiming && cfg.earlyArrivalMinutes > 0) {
         paid = roundCents(paid + cfg.earlyArrivalMinutes / 60);
       }
@@ -356,17 +358,22 @@ export function computeMonthPayroll(opts: {
       holidayHours += prem.holiday;
     }
     if (!isWeekend(date)) {
-      // Fond pre VÝPOČET SADZBY (base pay rate) je NEZÁVISLÝ od
-      // nastavenia "Denný fond" (to slúži len na sledovanie saldo/
-      // nadčasu podľa tvojho reálneho úväzku, napr. 7,5h). Firma tu
-      // používa štandardný celoštátny fond 8h/pracovný deň, sviatky sa
-      // nedčítavajú (turnusoví zamestnanci) — potvrdené na páske:
-      // 22 dní × 8h = 176h v apríli, presne sedí na Základná mzda.
-      fundHours += 8;
+      // Fond pre VÝPOČET SADZBY závisí od typu rotácie:
+      //  - "week8" (bežná 7,5h/8h týždenná zmena): štandardný fond =
+      //    pracovné dni MÍNUS sviatky × tvoj nastavený denný fond
+      //    (napr. 7,5h) — presne ako klasický Zákonník práce výpočet.
+      //  - "rot12" (12h turnusová rotácia) alebo neurčené: fond je
+      //    NEZÁVISLÝ od nastavenia "Denný fond" — firma tu používa
+      //    štandardný celoštátny fond 8h/pracovný deň, sviatky sa
+      //    nedčítavajú (turnusoví zamestnanci) — potvrdené na páske:
+      //    22 dní × 8h = 176h v apríli, presne sedí na Základná mzda.
+      const isWeek8 = opts.pattern === "week8" || opts.pattern === "week8alt";
+      const dayFund = isWeek8 ? (isDayOfRest(iso) ? 0 : opts.standardDailyHours) : 8;
+      fundHours += dayFund;
       // PN (práceneschopnosť): deň sa nepočíta ako odpracovaný, ale
       // zároveň sa vyníma z fondu, aby ťa nepenalizoval na základnej
       // mzde — žiadna výplata sa zaňho zatiaľ nepočíta.
-      if (kind === "pn") pnFundHours += 8;
+      if (kind === "pn") pnFundHours += dayFund;
     }
   }
 

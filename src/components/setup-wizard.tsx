@@ -36,7 +36,10 @@ export function SetupWizard({ mode, onClose }: SetupWizardProps) {
     if (type === "rot12") {
       return "2 ranné · 2 nočné · 4 voľno — opakuje sa 5 rokov";
     }
-    return "Pondelok–piatok 8 h, víkendy voľno — 5 rokov";
+    if (type === "week8alt") {
+      return "Týždeň ranná, týždeň poobedná (7,5 h), víkendy voľno — 5 rokov";
+    }
+    return "Pondelok–piatok 7,5 h, víkendy voľno — 5 rokov";
   }, [type]);
 
   function submit() {
@@ -118,9 +121,9 @@ export function SetupWizard({ mode, onClose }: SetupWizardProps) {
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="font-medium text-foreground">Týždenné 8-hodinové</p>
+              <p className="font-medium text-foreground">Týždenné 7,5-hodinové</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Klasický fond Po–Pia, predvolene 6:00–14:00
+                Klasický fond Po–Pia, predvolene 6:00–13:30
               </p>
             </div>
             {type === "week8" ? (
@@ -139,6 +142,55 @@ export function SetupWizard({ mode, onClose }: SetupWizardProps) {
                 {label}
               </span>
             ))}
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setType("week8alt")}
+          className={cn(
+            "rounded-2xl p-4 text-left shadow-border transition-[transform,background-color] duration-150 ease-out active:scale-[0.98]",
+            type === "week8alt" ? "bg-surface-2" : "bg-card",
+          )}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-medium text-foreground">Striedavá ranná/poobedná (7,5 h)</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Týždeň ranná (6:00–13:30), týždeň poobedná (14:00–21:30) — strieda sa
+              </p>
+            </div>
+            {type === "week8alt" ? (
+              <Check className="size-5 text-shift8" strokeWidth={2.2} />
+            ) : null}
+          </div>
+          <div className="mt-4 flex flex-col gap-1">
+            <div className="flex gap-1">
+              {["R", "R", "R", "R", "R", "V", "V"].map((label, i) => (
+                <span
+                  key={`w1-${label}-${i}`}
+                  className={cn(
+                    "flex h-7 flex-1 items-center justify-center rounded-md text-2xs font-semibold",
+                    label === "R" ? "bg-morning-dim text-morning" : "bg-off-dim text-off-fg",
+                  )}
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-1">
+              {["P", "P", "P", "P", "P", "V", "V"].map((label, i) => (
+                <span
+                  key={`w2-${label}-${i}`}
+                  className={cn(
+                    "flex h-7 flex-1 items-center justify-center rounded-md text-2xs font-semibold",
+                    label === "P" ? "bg-shift8-dim text-shift8" : "bg-off-dim text-off-fg",
+                  )}
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
           </div>
         </button>
       </div>

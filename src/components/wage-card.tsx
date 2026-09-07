@@ -32,6 +32,9 @@ export function WageCard({
   const nightEnd = useShiftStore((s) => s.nightEnd);
   const shift8Start = useShiftStore((s) => s.shift8Start);
   const shift8End = useShiftStore((s) => s.shift8End);
+  const shift8PmStart = useShiftStore((s) => s.shift8PmStart);
+  const shift8PmEnd = useShiftStore((s) => s.shift8PmEnd);
+  const pattern = useShiftStore((s) => s.pattern);
   const [open, setOpen] = useState(false);
 
   const key = monthKey(cursor);
@@ -43,7 +46,8 @@ export function WageCard({
     patternStart,
     cfg: payroll,
     extras,
-    times: { morningStart, morningEnd, nightStart, nightEnd, shift8Start, shift8End },
+    times: { morningStart, morningEnd, nightStart, nightEnd, shift8Start, shift8End, shift8PmStart, shift8PmEnd },
+    pattern,
   });
 
   const hasAnyShift = Object.values(days).some((d) => d.kind !== "off");

@@ -45,15 +45,16 @@ function easterSunday(year: number): Date {
 /**
  * Dni pracovného pokoja podľa Zákonníka práce / kalendar.aktuality.sk.
  * Štátny sviatok ≠ automaticky voľno:
- * - 1. 9. od 2024 nie je dňom pracovného pokoja
- * - 17. 11. od 2025 nie je dňom pracovného pokoja
- * - 8. 5. 2026 nie je dňom pracovného pokoja (konsolidácia)
- * 15. 9. 2026 ostáva vo fonde ako platený sviatok (aktuality.sk: september 21 dní / 157,5 h).
+ * - 1. 9. od 2024 nie je dňom pracovného pokoja (trvalo)
+ * - 17. 11. od 2025 nie je dňom pracovného pokoja (trvalo)
+ * - 8. 5. 2026 nie je dňom pracovného pokoja (dočasne, len 2026, konsolidačná novela č. 261/2025 Z. z.)
+ * - 15. 9. 2026 nie je dňom pracovného pokoja (dočasne, len 2026, konsolidačná novela č. 261/2025 Z. z.)
  */
 function isRestHoliday(year: number, m: number, d: number): boolean {
   if (m === 9 && d === 1) return false;
   if (m === 11 && d === 17 && year >= 2025) return false;
   if (m === 5 && d === 8 && year === 2026) return false;
+  if (m === 9 && d === 15 && year === 2026) return false;
   return true;
 }
 

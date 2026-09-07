@@ -21,6 +21,8 @@ export function SettingsPanel({ open, onOpenChange, onNewRotation, onOpenPayroll
   const nightEnd = useShiftStore((s) => s.nightEnd);
   const shift8Start = useShiftStore((s) => s.shift8Start);
   const shift8End = useShiftStore((s) => s.shift8End);
+  const shift8PmStart = useShiftStore((s) => s.shift8PmStart);
+  const shift8PmEnd = useShiftStore((s) => s.shift8PmEnd);
   const [confirmReset, setConfirmReset] = useState(false);
 
   const standalone =
@@ -89,6 +91,12 @@ export function SettingsPanel({ open, onOpenChange, onNewRotation, onOpenPayroll
             start={shift8Start}
             end={shift8End}
             onChange={(start, end) => setTimes({ shift8Start: start, shift8End: end }, true)}
+          />
+          <TimeRow
+            label="8-hodinová (poobedná)"
+            start={shift8PmStart}
+            end={shift8PmEnd}
+            onChange={(start, end) => setTimes({ shift8PmStart: start, shift8PmEnd: end }, true)}
           />
         </section>
 

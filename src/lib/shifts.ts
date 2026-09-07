@@ -5,12 +5,13 @@ import {
   differenceInCalendarDays,
   getDay,
   isWeekend,
+  startOfWeek,
 } from "date-fns";
 import { durationHours, fromISODate, toISODate } from "./dates";
 import { isDayOfRest } from "./holidays";
 
 export type ShiftKind = "morning" | "night" | "shift8" | "extra" | "vacation" | "trip" | "pn" | "off";
-export type PatternType = "rot12" | "week8";
+export type PatternType = "rot12" | "week8" | "week8alt";
 
 export interface DayShift {
   kind: ShiftKind;
@@ -29,6 +30,8 @@ export interface PatternTimes {
   nightEnd: string;
   shift8Start: string;
   shift8End: string;
+  shift8PmStart: string; // Poobedný týždeň pri striedavej 7,5h rotácii
+  shift8PmEnd: string;
 }
 
 export const DEFAULT_TIMES: PatternTimes = {
@@ -37,7 +40,9 @@ export const DEFAULT_TIMES: PatternTimes = {
   nightStart: "18:00",
   nightEnd: "06:00",
   shift8Start: "06:00",
-  shift8End: "14:00",
+  shift8End: "13:30",
+  shift8PmStart: "14:00",
+  shift8PmEnd: "21:30",
 };
 
 /** Neplatená prestávka na 12-hodinovej zmene (6–18 / 18–6). */
@@ -152,6 +157,31 @@ export function generateRotation(opts: {
     const iso = toISODate(date);
     const prev = opts.existing[iso];
     if (prev?.manual && !opts.overwriteManual) continue;
+
+    if (opts.type === "week8alt") {
+      const dow = getDay(date);
+      if (dow === 0 || dow === 6) {
+        next[iso] = makeShift("off", opts.times, false, prev?.note ?? "");
+        continue;
+      }
+      // Týždne (Po–Ne) sa počítajú od týždňa, v ktorom je "start" —
+      // párny index = ranný týždeň, nepárny = poobedný týždeň.
+      const weekIndex = Math.floor(
+        differenceInCalendarDays(startOfWeek(date, { weekStartsOn: 1 }), startOfWeek(origin, { weekStartsOn: 1 })) / 7,
+      );
+      const isAfternoonWeek = ((weekIndex % 2) + 2) % 2 === 1;
+      const shiftStart = isAfternoonWeek ? opts.times.shift8PmStart : opts.times.shift8Start;
+      const shiftEnd = isAfternoonWeek ? opts.times.shift8PmEnd : opts.times.shift8End;
+      next[iso] = {
+        kind: "shift8",
+        start: shiftStart,
+        end: shiftEnd,
+        hours: netWorkHours("shift8", shiftStart, shiftEnd),
+        note: prev?.note ?? "",
+        manual: false,
+      };
+      continue;
+    }
 
     let kind: ShiftKind = "off";
     if (opts.type === "rot12") {

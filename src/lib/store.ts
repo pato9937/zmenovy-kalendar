@@ -156,6 +156,8 @@ export const useShiftStore = create<ShiftState & ShiftActions>()(
         nightEnd: s.nightEnd,
         shift8Start: s.shift8Start,
         shift8End: s.shift8End,
+        shift8PmStart: s.shift8PmStart,
+        shift8PmEnd: s.shift8PmEnd,
         payroll: s.payroll,
         monthExtras: s.monthExtras,
       }),
@@ -171,5 +173,7 @@ function pickTimes(state: PatternTimes): PatternTimes {
     nightEnd: state.nightEnd,
     shift8Start: state.shift8Start,
     shift8End: state.shift8End,
+    shift8PmStart: state.shift8PmStart,
+    shift8PmEnd: state.shift8PmEnd,
   };
 }
