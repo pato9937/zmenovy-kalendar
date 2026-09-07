@@ -9,7 +9,7 @@ import {
 import { durationHours, fromISODate, toISODate } from "./dates";
 import { isDayOfRest } from "./holidays";
 
-export type ShiftKind = "morning" | "night" | "shift8" | "extra" | "vacation" | "trip" | "off";
+export type ShiftKind = "morning" | "night" | "shift8" | "extra" | "vacation" | "trip" | "pn" | "off";
 export type PatternType = "rot12" | "week8";
 
 export interface DayShift {
@@ -50,6 +50,7 @@ export const KIND_LABEL: Record<ShiftKind, string> = {
   extra: "Navyše",
   vacation: "Dovolenka",
   trip: "Pracovná cesta",
+  pn: "PN",
   off: "Voľno",
 };
 
@@ -60,6 +61,7 @@ export const KIND_SHORT: Record<ShiftKind, string> = {
   extra: "+",
   vacation: "D",
   trip: "C",
+  pn: "PN",
   off: "V",
 };
 
@@ -86,7 +88,7 @@ export function netWorkHours(
   end: string,
   break12 = BREAK_12H,
 ): number {
-  if (kind === "off" || kind === "vacation" || kind === "trip" || !start || !end) return 0;
+  if (kind === "off" || kind === "vacation" || kind === "trip" || kind === "pn" || !start || !end) return 0;
   const clock = durationHours(start, end);
   const unpaid =
     kind === "morning" || kind === "night" || (kind === "extra" && clock >= 11)
@@ -109,6 +111,9 @@ export function makeShift(
   }
   if (kind === "trip") {
     return { kind, start: "", end: "", hours: 8, note, manual, perDiem: 0 };
+  }
+  if (kind === "pn") {
+    return { kind, start: "", end: "", hours: 0, note, manual };
   }
   const { start, end } = timesForKind(kind, times);
   return {

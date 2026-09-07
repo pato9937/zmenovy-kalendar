@@ -261,6 +261,7 @@ function Legend() {
     { label: "Navyše", className: "bg-extra" },
     { label: "Dovolenka", className: "bg-vacation" },
     { label: "Cesta", className: "bg-trip" },
+    { label: "PN", className: "bg-pn" },
     { label: "Voľno", className: "bg-off" },
     { label: "Víkend", className: "bg-weekend ring-1 ring-border" },
     { label: "Sviatok", className: "bg-off ring-1 ring-holiday" },

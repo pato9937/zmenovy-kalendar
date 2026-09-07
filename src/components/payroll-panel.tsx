@@ -67,13 +67,13 @@ export function PayrollPanel({ open, onOpenChange }: PayrollPanelProps) {
 
         <Section title="Výkonnostný bonus">
           <NumberField
-            label="Výkon. bonus % (0–10)"
+            label="Výkon. bonus %"
             value={payroll.vykonBonusPercent}
-            onCommit={(v) => setPayroll({ vykonBonusPercent: Math.max(0, Math.min(10, v)) })}
+            onCommit={(v) => setPayroll({ vykonBonusPercent: Math.max(0, Math.min(100, v)) })}
           />
           <p className="text-2xs text-subtle">
-            Diskrétny bonus 0–10 % zo (základná mzda + zákl. za nadčas) — dá ho nadriadený,
-            nedá sa vypočítať vopred. Zadaj ho ručne za mesiac, keď ho poznáš.
+            Diskrétny bonus zo (základná mzda + zákl. za nadčas) — dá ho nadriadený, nedá sa
+            vypočítať vopred. Zadaj ho ručne za mesiac, keď ho poznáš.
           </p>
         </Section>
 

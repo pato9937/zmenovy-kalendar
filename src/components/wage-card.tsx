@@ -26,6 +26,12 @@ export function WageCard({
   const payroll = useShiftStore((s) => s.payroll);
   const monthExtras = useShiftStore((s) => s.monthExtras);
   const setMonthExtras = useShiftStore((s) => s.setMonthExtras);
+  const morningStart = useShiftStore((s) => s.morningStart);
+  const morningEnd = useShiftStore((s) => s.morningEnd);
+  const nightStart = useShiftStore((s) => s.nightStart);
+  const nightEnd = useShiftStore((s) => s.nightEnd);
+  const shift8Start = useShiftStore((s) => s.shift8Start);
+  const shift8End = useShiftStore((s) => s.shift8End);
   const [open, setOpen] = useState(false);
 
   const key = monthKey(cursor);
@@ -37,6 +43,7 @@ export function WageCard({
     patternStart,
     cfg: payroll,
     extras,
+    times: { morningStart, morningEnd, nightStart, nightEnd, shift8Start, shift8End },
   });
 
   const hasAnyShift = Object.values(days).some((d) => d.kind !== "off");
@@ -80,16 +87,11 @@ export function WageCard({
         </Button>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3">
         <NumberField
           label="Dovolenka navyše (h)"
           value={extras.vacationHours}
           onCommit={(v) => setMonthExtras(key, { vacationHours: Math.max(0, v) })}
-        />
-        <NumberField
-          label="Iné v hrubom (€)"
-          value={extras.extraGross}
-          onCommit={(v) => setMonthExtras(key, { extraGross: v })}
         />
       </div>
       <p className="mt-1 text-2xs text-subtle">
@@ -125,7 +127,6 @@ export function WageCard({
               p.travel ? ["Cestovné", null, p.travel] : null,
               p.attendance ? ["Prítomnostná", null, p.attendance] : null,
               p.halfYear ? ["Polročná", "½ základu", p.halfYear] : null,
-              p.extraGross ? ["Iné", null, p.extraGross] : null,
             ]}
             total={p.gross}
             totalLabel="Hrubý príjem"

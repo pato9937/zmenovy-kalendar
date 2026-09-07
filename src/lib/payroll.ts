@@ -78,9 +78,9 @@ export const DEFAULT_PAYROLL: PayrollConfig = {
   afternoonTo: "22:00",
   nightFrom: "22:00",
   nightTo: "06:00",
-  travel: 60,
-  attendance: 70,
-  attendanceBonus: 140,
+  travel: 0, // Nastav podľa svojej firmy — nie každá firma dáva rovnaké cestovné/tankovanie
+  attendance: 0, // Nastav podľa svojej firmy — nie každá firma dáva dochádzkovú prémiu
+  attendanceBonus: 0, // Nastav podľa svojej firmy (kvartálna dochádzková prémia, ak ju máš)
   attendanceMonths: [3, 6, 9, 12],
   halfYearMonths: [5, 11],
   food: 10.0,
@@ -97,13 +97,12 @@ export const DEFAULT_PAYROLL: PayrollConfig = {
 
 export interface MonthExtras {
   vacationHours: number;
-  extraGross: number;
   fundHoursOverride?: number; // Ak zadané, použije sa NAMIESTO vypočítaného fondu — zadaj priamo číslo "Úväzok" z pásky (kolíše mesiac čo mesiac, napr. 176h alebo 132h, nedá sa spoľahlivo predpočítať)
   balanceAdjustmentHours?: number; // Prenesené saldo nadčasov z predošlého mesiaca (napr. "Saldo nadčasov" z poslednej pásky) — appka si ho naprieč mesiacmi nepamätá sama, zadaj ho ručne každý mesiac nanovo. Vypláca sa max. 32h/mesiac.
   annualTaxSettlement?: number; // Jednorazová položka "Ročné zúčt.dane" z pásky (raz ročne) — zadaj ako KLADNÉ číslo (refundácia), pripočíta sa priamo k čistej mzde
 }
 
-export const EMPTY_EXTRAS: MonthExtras = { vacationHours: 0, extraGross: 0 };
+export const EMPTY_EXTRAS: MonthExtras = { vacationHours: 0 };
 
 const DAY_MINS = 24 * 60;
 
@@ -218,6 +217,7 @@ export function shiftPremiumHours(
 export interface PayrollBreakdown {
   workHours: number;
   vacationHours: number;
+  pnHours: number; // Hodiny PN, ktoré vyňali fond (informačné, žiadna výplata sa z nich nepočíta)
   fundHours: number;
   overtimeHours: number;
   perDiemTotal: number; // Súčet diét z dní "Pracovná cesta" — informačné, NIE je súčasťou hrubej/čistej mzdy
@@ -237,7 +237,6 @@ export interface PayrollBreakdown {
   travel: number;
   attendance: number;
   halfYear: number;
-  extraGross: number;
   gross: number;
   health: number;
   sickness: number;
@@ -300,6 +299,7 @@ export function computeMonthPayroll(opts: {
   patternStart: string | null;
   cfg: PayrollConfig;
   extras?: MonthExtras;
+  times?: import("./shifts").PatternTimes; // skutočne nastavené časy zmien (Nastavenia) — ak chýba, použije sa DEFAULT_TIMES
 }): PayrollBreakdown {
   const start = startOfMonth(opts.cursor);
   const end = endOfMonth(opts.cursor);
@@ -314,6 +314,7 @@ export function computeMonthPayroll(opts: {
   let weekendHours = 0;
   let holidayHours = 0;
   let calendarVacationHours = 0;
+  let pnFundHours = 0;
   let perDiemTotal = 0;
 
   for (const date of eachDayOfInterval({ start, end })) {
@@ -339,9 +340,11 @@ export function computeMonthPayroll(opts: {
       // odpracovaných/nadčasových hodín, nie do rozpisu poobedný/
       // nočný/víkendový/sviatočný príplatok (na to slúži ručná úprava
       // konkrétneho dňa v kalendári).
+      const times = opts.times ?? DEFAULT_TIMES;
       const isDefaultTiming =
-        (kind === "morning" && shift.start === DEFAULT_TIMES.morningStart && shift.end === DEFAULT_TIMES.morningEnd) ||
-        (kind === "night" && shift.start === DEFAULT_TIMES.nightStart && shift.end === DEFAULT_TIMES.nightEnd);
+        (kind === "morning" && shift.start === times.morningStart && shift.end === times.morningEnd) ||
+        (kind === "night" && shift.start === times.nightStart && shift.end === times.nightEnd) ||
+        (kind === "shift8" && shift.start === times.shift8Start && shift.end === times.shift8End);
       if (isDefaultTiming && cfg.earlyArrivalMinutes > 0) {
         paid = roundCents(paid + cfg.earlyArrivalMinutes / 60);
       }
@@ -360,6 +363,10 @@ export function computeMonthPayroll(opts: {
       // nedčítavajú (turnusoví zamestnanci) — potvrdené na páske:
       // 22 dní × 8h = 176h v apríli, presne sedí na Základná mzda.
       fundHours += 8;
+      // PN (práceneschopnosť): deň sa nepočíta ako odpracovaný, ale
+      // zároveň sa vyníma z fondu, aby ťa nepenalizoval na základnej
+      // mzde — žiadna výplata sa zaňho zatiaľ nepočíta.
+      if (kind === "pn") pnFundHours += 8;
     }
   }
 
@@ -376,7 +383,7 @@ export function computeMonthPayroll(opts: {
   // A pripočíta sa k ručne zadanému číslu (napr. pre mesiace, keď ešte
   // kalendár nie je takto vyplnený deň po dni).
   const vacationHours = Math.max(0, calendarVacationHours + extras.vacationHours);
-  const remainingFund = Math.max(0, fundHours - vacationHours);
+  const remainingFund = Math.max(0, fundHours - vacationHours - pnFundHours);
 
   // Regulárne hodiny vychádzajú ČISTO z toho, čo je tento mesiac
   // reálne v kalendári (žiadne prenesené saldo) — presne toľko, koľko
@@ -415,7 +422,6 @@ export function computeMonthPayroll(opts: {
   const travel = workHours > 0 ? cfg.travel : 0;
   const attendance = workHours > 0 || vacationHours > 0 ? attendanceFor(month, cfg) : 0;
   const halfYear = halfYearPay(month, cfg);
-  const extraGross = extras.extraGross;
 
   const gross = roundCents(
     base +
@@ -429,8 +435,7 @@ export function computeMonthPayroll(opts: {
       vykonBonus +
       travel +
       attendance +
-      halfYear +
-      extraGross,
+      halfYear,
   );
 
   const health = roundCents(gross * (cfg.healthRate / 100));
@@ -452,6 +457,7 @@ export function computeMonthPayroll(opts: {
     workHours: roundCents(workHours),
     perDiemTotal: roundCents(perDiemTotal),
     vacationHours: roundCents(vacationHours),
+    pnHours: roundCents(pnFundHours),
     fundHours: roundCents(fundHours),
     overtimeHours: roundCents(overtimeHours),
     afternoonHours: roundCents(afternoonHours),
@@ -470,7 +476,6 @@ export function computeMonthPayroll(opts: {
     travel: roundCents(travel),
     attendance: roundCents(attendance),
     halfYear: roundCents(halfYear),
-    extraGross: roundCents(extraGross),
     gross,
     health,
     sickness,

@@ -7,7 +7,7 @@ import { BREAK_12H, KIND_LABEL, netWorkHours, type ShiftKind } from "@/lib/shift
 import { useShiftStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-const KINDS: ShiftKind[] = ["morning", "night", "shift8", "extra", "vacation", "trip", "off"];
+const KINDS: ShiftKind[] = ["morning", "night", "shift8", "extra", "vacation", "trip", "pn", "off"];
 
 interface DayEditorProps {
   iso: string | null;
@@ -44,9 +44,11 @@ export function DayEditor({ iso, onClose, onMove }: DayEditorProps) {
             ? `Dovolenka · ${(shift?.hours ?? 0).toString().replace(".", ",")} h`
             : kind === "trip"
               ? `Pracovná cesta · ${(shift?.hours ?? 0).toString().replace(".", ",")} h`
-              : kind !== "off" && shift
-                ? formatRange(shift.start, shift.end, true)
-                : "Voľný deň"
+              : kind === "pn"
+                ? "PN — práceneschopnosť"
+                : kind !== "off" && shift
+                  ? formatRange(shift.start, shift.end, true)
+                  : "Voľný deň"
       }
     >
       {iso ? (
@@ -124,7 +126,14 @@ export function DayEditor({ iso, onClose, onMove }: DayEditorProps) {
             </label>
           ) : null}
 
-          {kind !== "off" && kind !== "vacation" && kind !== "trip" ? (
+          {kind === "pn" ? (
+            <p className="rounded-xl bg-pn-dim px-3 py-2 text-sm text-pn">
+              Práceneschopnosť — nezapočíta sa do odpracovaných hodín, fond sa tento deň nekráti na
+              tvoj úkor. Výplatu za PN appka zatiaľ nepočíta.
+            </p>
+          ) : null}
+
+          {kind !== "off" && kind !== "vacation" && kind !== "trip" && kind !== "pn" ? (
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
                 <span className="text-xs font-medium text-muted-foreground">Od</span>
@@ -215,6 +224,7 @@ function chipActive(kind: ShiftKind) {
   if (kind === "extra") return "bg-extra-dim text-extra";
   if (kind === "vacation") return "bg-vacation-dim text-vacation";
   if (kind === "trip") return "bg-trip-dim text-trip";
+  if (kind === "pn") return "bg-pn-dim text-pn";
   return "bg-off-dim text-off-fg";
 }
 

@@ -28,6 +28,8 @@ export function SettingsPanel({ open, onOpenChange, onNewRotation, onOpenPayroll
     (window.matchMedia("(display-mode: standalone)").matches ||
       ("standalone" in window.navigator && Boolean((window.navigator as { standalone?: boolean }).standalone)));
 
+  const isAndroid = typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent || "");
+
   return (
     <Drawer
       open={open}
@@ -92,12 +94,22 @@ export function SettingsPanel({ open, onOpenChange, onNewRotation, onOpenPayroll
 
         {!standalone ? (
           <section className="rounded-xl bg-surface-2 p-3 text-sm leading-relaxed text-muted-foreground">
-            <p className="font-medium text-foreground">Pridať na plochu iPhonu</p>
-            <ol className="mt-2 list-decimal space-y-1 pl-4">
-              <li>Otvor appku v Safari</li>
-              <li>Ťukni na Zdieľať</li>
-              <li>Pridať na plochu</li>
-            </ol>
+            <p className="font-medium text-foreground">
+              {isAndroid ? "Pridať na plochu (Android)" : "Pridať na plochu iPhonu"}
+            </p>
+            {isAndroid ? (
+              <ol className="mt-2 list-decimal space-y-1 pl-4">
+                <li>Otvor appku v Chrome</li>
+                <li>Ťukni na ⋮ (tri bodky vpravo hore)</li>
+                <li>Inštalovať appku / Pridať na plochu</li>
+              </ol>
+            ) : (
+              <ol className="mt-2 list-decimal space-y-1 pl-4">
+                <li>Otvor appku v Safari</li>
+                <li>Ťukni na Zdieľať</li>
+                <li>Pridať na plochu</li>
+              </ol>
+            )}
           </section>
         ) : null}
 
