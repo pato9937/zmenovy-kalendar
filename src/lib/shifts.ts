@@ -255,7 +255,7 @@ export function computeStats(opts: {
     else if (kind === "extra") stats.extraCount += 1;
     else stats.offCount += 1;
 
-    if (!isWeekend(date) && !isDayOfRest(iso)) {
+    if (!isWeekend(date) && !isDayOfRest(iso) && kind !== "vacation" && kind !== "pn") {
       stats.fundDays += 1;
       stats.standardHours += opts.standardDailyHours;
     }
