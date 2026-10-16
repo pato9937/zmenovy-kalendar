@@ -124,6 +124,7 @@ export function PayrollPanel({ open, onOpenChange }: PayrollPanelProps) {
           <div className="grid grid-cols-2 gap-2">
             <NumberField label="Strava €" value={payroll.food} onCommit={(v) => setPayroll({ food: v })} />
             <NumberField label="DDS €" value={payroll.dds} onCommit={(v) => setPayroll({ dds: v })} />
+            <NumberField label="DDS od firmy €" value={payroll.ddsEmployerTaxable} onCommit={(v) => setPayroll({ ddsEmployerTaxable: Math.max(0, v) })} />
           </div>
         </Section>
 

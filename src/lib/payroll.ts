@@ -1,7 +1,7 @@
 import { addDays, eachDayOfInterval, endOfMonth, isWeekend, startOfMonth } from "date-fns";
 import { fromISODate, toISODate, toMinutes } from "./dates";
 import { isDayOfRest } from "./holidays";
-import { BREAK_12H, DEFAULT_TIMES, netWorkHours, type DayShift } from "./shifts";
+import { BREAK_12H, DEFAULT_TIMES, netWorkHours, rotaKindOn, type DayShift } from "./shifts";
 
 // src/lib/payroll.ts
 //
@@ -86,7 +86,7 @@ export const DEFAULT_PAYROLL: PayrollConfig = {
   food: 0, // Nastav podľa svojej firmy — zrážka za stravu sa líši
   dds: 0, // Nastav podľa svojej zmluvy o DDS (3. pilier), ak ho máš
   mealVouchers: 0,
-  ddsEmployerTaxable: 15.0,
+  ddsEmployerTaxable: 0, // príspevok zamestnávateľa na DDS (zdaniteľný príjem, vstupuje aj do základu zdravotného)
   nczd: 497.23,
   healthRate: 5,
   sicknessRate: 1.4,
@@ -202,13 +202,14 @@ export function shiftPremiumHours(
   const nit = windows(cfg.nightFrom, cfg.nightTo);
   const out: PremiumHours = { paid: paidHours, afternoon: 0, night: 0, weekend: 0, holiday: 0 };
   for (const seg of segments(iso, start, end)) {
-    const hours = ((seg.span[1] - seg.span[0]) / 60) * factor;
-    const date = fromISODate(seg.iso);
     out.afternoon += (sumOverlap(seg.span, aft) / 60) * factor;
     out.night += (sumOverlap(seg.span, nit) / 60) * factor;
-    const dow = date.getDay();
-    if (dow === 6 || dow === 0) out.weekend += hours;
   }
+  // So/Ne: celá zmena sa posudzuje podľa dňa, kedy ZAČÍNA (potvrdené na
+  // pásky apríl 2026: 6 víkendových zmien × 11 h = 66 h; september 2026:
+  // 4 × 11 h = 44 h) — nie rozdeľovaním po polnoci.
+  const startDow = fromISODate(iso).getDay();
+  if (startDow === 6 || startDow === 0) out.weekend = paidHours;
   // Sviatok: celá zmena podľa dňa ZAČIATKU (viď poznámka vyššie), nie po segmentoch.
   if (isDayOfRest(iso)) out.holiday = paidHours;
   return out;
@@ -316,6 +317,7 @@ export function computeMonthPayroll(opts: {
   let holidayHours = 0;
   let calendarVacationHours = 0;
   let pnFundHours = 0;
+  let pnDays = 0;
   let perDiemTotal = 0;
 
   for (const date of eachDayOfInterval({ start, end })) {
@@ -323,6 +325,7 @@ export function computeMonthPayroll(opts: {
     const iso = toISODate(date);
     const shift = opts.days[iso];
     const kind = shift?.kind ?? "off";
+    if (kind === "pn") pnDays += 1;
     if (kind === "vacation") {
       calendarVacationHours += shift?.hours ?? 0;
     } else if (kind === "trip") {
@@ -357,22 +360,29 @@ export function computeMonthPayroll(opts: {
       weekendHours += prem.weekend;
       holidayHours += prem.holiday;
     }
-    if (!isWeekend(date)) {
-      // Fond pre VÝPOČET SADZBY závisí od typu rotácie:
-      //  - "week8" (bežná 7,5h/8h týždenná zmena): štandardný fond =
-      //    pracovné dni MÍNUS sviatky × tvoj nastavený denný fond
-      //    (napr. 7,5h) — presne ako klasický Zákonník práce výpočet.
-      //  - "rot12" (12h turnusová rotácia) alebo neurčené: fond je
-      //    NEZÁVISLÝ od nastavenia "Denný fond" — firma tu používa
-      //    štandardný celoštátny fond 8h/pracovný deň, sviatky sa
-      //    nedčítavajú (turnusoví zamestnanci) — potvrdené na páske:
-      //    22 dní × 8h = 176h v apríli, presne sedí na Základná mzda.
+    if (opts.pattern === "rot12" && opts.patternStart) {
+      // 12h rotácia: fond = plánované hodiny podľa rotácie (počet plánovaných
+      // zmien × 11 h). Potvrdené na 7 páskach (12/2025–09/2026: 176 h, vo
+      // februári 132 h = 12 zmien). PN/dovolenka na plánovanej zmene znižujú
+      // fond o hodiny tej zmeny (september: 6 PN dní × 11 h = 66 h).
+      const rt = opts.times ?? DEFAULT_TIMES;
+      const rk = rotaKindOn(date, gate);
+      const planned =
+        rk === "morning"
+          ? netWorkHours("morning", rt.morningStart, rt.morningEnd)
+          : rk === "night"
+            ? netWorkHours("night", rt.nightStart, rt.nightEnd)
+            : 0;
+      fundHours += planned;
+      if (kind === "pn") pnFundHours += planned;
+    } else if (!isWeekend(date)) {
+      // Ostatné vzory: fond zo všetkých pracovných dní.
+      //  - "week8"/"week8alt" (7,5h/8h týždeň): pracovné dni MÍNUS dni pracovného
+      //    pokoja × tvoj denný fond.
+      //  - bez vzoru: 8 h/pracovný deň, sviatky sa nekrátia.
       const isWeek8 = opts.pattern === "week8" || opts.pattern === "week8alt";
       const dayFund = isWeek8 ? (isDayOfRest(iso) ? 0 : opts.standardDailyHours) : 8;
       fundHours += dayFund;
-      // PN (práceneschopnosť): deň sa nepočíta ako odpracovaný, ale
-      // zároveň sa vyníma z fondu, aby ťa nepenalizoval na základnej
-      // mzde — žiadna výplata sa zaňho zatiaľ nepočíta.
       if (kind === "pn") pnFundHours += dayFund;
     }
   }
@@ -427,7 +437,7 @@ export function computeMonthPayroll(opts: {
   const vykonBonus = roundCents((base + overtimeBase) * (cfg.vykonBonusPercent / 100));
   const month = opts.cursor.getMonth() + 1;
   const travel = workHours > 0 ? cfg.travel : 0;
-  const attendance = workHours > 0 || vacationHours > 0 ? attendanceFor(month, cfg) : 0;
+  const attendance = pnDays === 0 && (workHours > 0 || vacationHours > 0) ? attendanceFor(month, cfg) : 0; // v mesiaci s PN sa prítomnostná neplatí (páska 09/2026)
   const halfYear = halfYearPay(month, cfg);
 
   const gross = roundCents(
@@ -445,7 +455,7 @@ export function computeMonthPayroll(opts: {
       halfYear,
   );
 
-  const health = roundCents(gross * (cfg.healthRate / 100));
+  const health = roundCents((gross + cfg.ddsEmployerTaxable) * (cfg.healthRate / 100)); // základ = hrubá + príspevok zamestnávateľa na DDS (potvrdené 12/2025–09/2026)
   const sickness = roundCents(gross * (cfg.sicknessRate / 100));
   const disability = roundCents(gross * (cfg.disabilityRate / 100));
   const pension = roundCents(gross * (cfg.pensionRate / 100));

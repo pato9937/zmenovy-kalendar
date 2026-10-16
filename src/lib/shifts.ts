@@ -83,6 +83,13 @@ const ROT12: ShiftKind[] = [
   "off",
 ];
 
+/** Plánovaná zmena z 12h rotácie (R,R,N,N,voľno×4) pre daný deň, podľa dňa začiatku rotácie. */
+export function rotaKindOn(date: Date, origin: Date): ShiftKind {
+  const i = differenceInCalendarDays(date, origin);
+  return ROT12[((i % 8) + 8) % 8] ?? "off";
+}
+
+
 export const ROTATION_MONTHS = 60;
 
 export function rotationEndISO(start: string): string {
